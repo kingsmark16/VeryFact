@@ -1,12 +1,16 @@
 package com.veryfact.ai;
 
 import com.google.genai.Client;
+import com.google.genai.gaos.models.interactions.Content;
 import com.google.genai.gaos.models.interactions.CreateModelInteraction;
 import com.google.genai.gaos.models.interactions.CreateModelInteractionResponseFormat;
 import com.google.genai.gaos.models.interactions.Interaction;
 import com.google.genai.gaos.models.interactions.InteractionsInput;
 import com.google.genai.gaos.models.interactions.Model;
+import com.google.genai.gaos.models.interactions.ModelOutputStep;
 import com.google.genai.gaos.models.interactions.ResponseFormat;
+import com.google.genai.gaos.models.interactions.Step;
+import com.google.genai.gaos.models.interactions.TextContent;
 import com.google.genai.gaos.models.interactions.TextResponseFormat;
 import com.google.genai.gaos.models.interactions.TextResponseFormatMimeType;
 import com.google.genai.gaos.models.operations.CreateInteractionRequestBody;
@@ -64,9 +68,7 @@ public class GeminiFactCheckAi implements FactCheckAi {
                 .interaction()
                 .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
 
-        String json = interaction
-                .outputText()
-                .orElseThrow(() -> new IllegalStateException("Empty output text from Gemini API"));
+        String json = extractOutputText(interaction);
 
         GeminiStructuredResponse parsed = objectMapper.readValue(json, GeminiStructuredResponse.class);
         return new AiVerificationOutput(
@@ -77,6 +79,33 @@ public class GeminiFactCheckAi implements FactCheckAi {
                 parsed.claims(),
                 parsed.redFlags(),
                 modelName);
+    }
+
+    private String extractOutputText(Interaction interaction) {
+        String direct = interaction.outputText().orElse("");
+        if (!direct.isBlank()) {
+            return direct;
+        }
+
+        StringBuilder text = new StringBuilder();
+        for (Step step : interaction.steps().orElse(List.of())) {
+            if (step instanceof ModelOutputStep modelOutput) {
+                for (Content content : modelOutput.content().orElse(List.of())) {
+                    if (content instanceof TextContent textContent) {
+                        text.append(textContent.text().orElse(""));
+                    }
+                }
+            }
+        }
+
+        if (text.isEmpty()) {
+            log.error(
+                    "Gemini returned no text. status={}, errors={}",
+                    interaction.status().map(Object::toString).orElse("unknown"),
+                    interaction.errors().map(Object::toString).orElse("none"));
+            throw new IllegalStateException("Empty output text from Gemini API");
+        }
+        return text.toString();
     }
 
     private AiVerificationOutput fallbackDemoOutput(String text, String modelVersion) {
