@@ -29,9 +29,13 @@
 - [x] Frontend `InputTabs` (Text / URL / Images) & `ImageDropzone` (drag-drop + clipboard paste)
 
 ## Phase 4 — Hardening
-- [ ] Per-IP rate limiting on `POST /api/checks` (10 checks/hour, `429` + `Retry-After`)
-- [ ] CORS configuration (`veryfact.cors.allowed-origins`)
-- [ ] Frontend `429` rate-limit feedback
-- [ ] Rate-limiter unit tests
+- [x] Per-IP rate limiting on `POST /api/checks` (10 checks/hour, `429` + `Retry-After`)
+- [x] CORS configuration (`veryfact.cors.allowed-origins`)
+- [x] Frontend `429` rate-limit feedback
+- [x] Rate-limiter unit tests
 
 ## Phase 5 — Deploy-ready
+- [ ] Backend multi-stage `Dockerfile` (Eclipse Temurin 25 JRE + non-root user)
+- [ ] Frontend multi-stage `Dockerfile` + `nginx.conf` (SPA fallback + `/api` reverse proxy)
+- [ ] Full-stack `docker-compose.yml` (`postgres`, `backend`, `frontend` with healthchecks)
+- [ ] Root `README.md` with architecture, setup, and AI workflow documentation

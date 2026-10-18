@@ -149,6 +149,9 @@ export default function CheckPage() {
         {createCheck.error instanceof ApiError && (
           <p role="alert" className="text-sm text-red-600">
             {createCheck.error.detail}
+            {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
+              ? ` (Retry after ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
+              : ""}
           </p>
         )}
 
