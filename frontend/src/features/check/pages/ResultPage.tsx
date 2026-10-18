@@ -1,8 +1,10 @@
 import { Link, useParams } from "react-router";
 import { ApiError } from "@/api/axios-client";
+import { Progress } from "@/components/ui/progress";
 import { useCheckResult } from "../api/check-api";
 import { ClaimCard } from "../components/ClaimCard";
 import { ProgressSteps } from "../components/ProgressSteps";
+import { ShareButton } from "../components/ShareButton";
 import { VerdictBadge } from "../components/VerdictBadge";
 
 export default function ResultPage() {
@@ -33,12 +35,17 @@ export default function ResultPage() {
   }
 
   const inProgress = data.status === "PENDING" || data.status === "PROCESSING";
+  const confidencePct =
+    typeof data.confidence === "number" ? Math.round(data.confidence * 100) : null;
 
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <Link to="/" className="text-sm underline">
-        ← New check
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/" className="text-sm underline">
+          ← New check
+        </Link>
+        <ShareButton />
+      </div>
 
       {inProgress && <ProgressSteps stage={data.stage} />}
 
@@ -50,16 +57,22 @@ export default function ResultPage() {
 
       {data.status === "COMPLETED" && (
         <>
-          <section className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">Overall verdict</h1>
-              <VerdictBadge verdict={data.overallVerdict} />
+          <section className="space-y-3 rounded-lg border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">Overall verdict</h1>
+                <VerdictBadge verdict={data.overallVerdict} />
+              </div>
+              {confidencePct !== null && (
+                <span className="text-sm text-muted-foreground">Confidence: {confidencePct}%</span>
+              )}
             </div>
+            {confidencePct !== null && <Progress value={confidencePct} />}
             <p>{data.summary}</p>
           </section>
 
           {data.redFlags && data.redFlags.length > 0 && (
-            <section>
+            <section className="space-y-1">
               <h2 className="font-semibold">Red flags</h2>
               <ul className="list-disc pl-5 text-sm">
                 {data.redFlags.map((flag) => (

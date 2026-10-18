@@ -2,11 +2,12 @@ package com.veryfact.ai;
 
 import com.veryfact.check.domain.Verdict;
 import com.veryfact.check.dto.ClaimDto;
+import com.veryfact.check.dto.FactCheckMatchDto;
 import java.util.List;
 
 public interface FactCheckAi {
 
-    AiVerificationOutput analyzeText(String text);
+    AiVerificationOutput analyzeText(String text, List<FactCheckMatchDto> factChecks);
 
     record AiVerificationOutput(
             String language,

@@ -17,9 +17,15 @@
 - [x] CheckPage + ResultPage with polling
 
 ## Phase 2 — Evidence & Fact Check Tools API
-- [ ] Google Fact Check Tools API client (`claims:search`)
-- [ ] Combine existing human fact-checks with Gemini + Google Search grounding
-- [ ] Source credibility & confidence meter UI
-- [ ] Shareable result link copy button & metadata
+- [x] Google Fact Check Tools API client (`claims:search`)
+- [x] Combine existing human fact-checks with Gemini + Google Search grounding
+- [x] Source credibility & confidence meter UI
+- [x] Shareable result link copy button & metadata
 
-## Phase 3 — Images + URL · Phase 4 — Hardening · Phase 5 — Deploy-ready
+## Phase 3 — Images + URL Extraction
+- [ ] URL article extractor (`Jsoup` + SSRF private-IP guard)
+- [ ] Multimodal image upload (`multipart/form-data`, max 4 × 5 MB, JPEG/PNG/WebP magic-byte check)
+- [ ] Gemini multimodal claim extraction & verification (text + URL + images)
+- [ ] Frontend `InputTabs` (Text / URL / Images) & `ImageDropzone` (drag-drop + clipboard paste)
+
+## Phase 4 — Hardening · Phase 5 — Deploy-ready

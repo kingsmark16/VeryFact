@@ -48,7 +48,13 @@ export interface components {
       /** @enum {string} */
       status?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
       /** @enum {string} */
-      stage?: "QUEUED" | "EXTRACTING_CLAIMS" | "VERIFYING_CLAIMS" | "COMPLETED" | "FAILED";
+      stage?:
+        | "QUEUED"
+        | "EXTRACTING_CLAIMS"
+        | "SEARCHING_FACT_CHECKS"
+        | "VERIFYING_CLAIMS"
+        | "COMPLETED"
+        | "FAILED";
       cached?: boolean;
     };
     CheckResultDto: {
@@ -60,7 +66,13 @@ export interface components {
       /** @enum {string} */
       status?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
       /** @enum {string} */
-      stage?: "QUEUED" | "EXTRACTING_CLAIMS" | "VERIFYING_CLAIMS" | "COMPLETED" | "FAILED";
+      stage?:
+        | "QUEUED"
+        | "EXTRACTING_CLAIMS"
+        | "SEARCHING_FACT_CHECKS"
+        | "VERIFYING_CLAIMS"
+        | "COMPLETED"
+        | "FAILED";
       /** @enum {string} */
       overallVerdict?:
         | "TRUE"
@@ -97,6 +109,15 @@ export interface components {
       confidence?: number;
       explanation?: string;
       sources?: components["schemas"]["SourceDto"][];
+      factChecks?: components["schemas"]["FactCheckMatchDto"][];
+    };
+    FactCheckMatchDto: {
+      claimText?: string;
+      claimant?: string;
+      publisher?: string;
+      title?: string;
+      url?: string;
+      textualRating?: string;
     };
     SourceDto: {
       title?: string;

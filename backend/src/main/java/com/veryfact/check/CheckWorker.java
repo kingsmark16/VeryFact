@@ -7,7 +7,10 @@ import com.veryfact.check.domain.CheckStatus;
 import com.veryfact.check.domain.FactCheck;
 import com.veryfact.check.domain.FactCheckRepository;
 import com.veryfact.check.dto.CheckAnalysisPayload;
+import com.veryfact.check.dto.FactCheckMatchDto;
+import com.veryfact.factcheck.FactCheckToolsClient;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +23,13 @@ public class CheckWorker {
     private static final Logger log = LoggerFactory.getLogger(CheckWorker.class);
 
     private final FactCheckRepository repository;
+    private final FactCheckToolsClient factCheckToolsClient;
     private final FactCheckAi factCheckAi;
 
-    public CheckWorker(FactCheckRepository repository, FactCheckAi factCheckAi) {
+    public CheckWorker(
+            FactCheckRepository repository, FactCheckToolsClient factCheckToolsClient, FactCheckAi factCheckAi) {
         this.repository = repository;
+        this.factCheckToolsClient = factCheckToolsClient;
         this.factCheckAi = factCheckAi;
     }
 
@@ -36,10 +42,15 @@ public class CheckWorker {
 
         try {
             check.setStatus(CheckStatus.PROCESSING);
+            check.setStage(CheckStage.SEARCHING_FACT_CHECKS);
+            repository.save(check);
+
+            List<FactCheckMatchDto> factChecks = factCheckToolsClient.searchClaims(fullText);
+
             check.setStage(CheckStage.VERIFYING_CLAIMS);
             repository.save(check);
 
-            AiVerificationOutput output = factCheckAi.analyzeText(fullText);
+            AiVerificationOutput output = factCheckAi.analyzeText(fullText, factChecks);
 
             check.setLanguage(output.language());
             check.setOverallVerdict(output.overallVerdict());
