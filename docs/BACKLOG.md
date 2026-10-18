@@ -10,11 +10,16 @@
 - [x] CI
 
 ## Phase 1 — Text check MVP
-- [ ] Flyway V1 schema + Check entity/repository
-- [ ] POST /api/checks (text) + GET /api/checks/{slug}
-- [ ] Async worker + Gemini claim extraction + verification
-- [ ] OpenAPI → TypeScript client generation
-- [ ] CheckPage + ResultPage with polling
+- [x] Flyway V1 schema + Check entity/repository
+- [x] POST /api/checks (text) + GET /api/checks/{slug}
+- [x] Async worker + Gemini claim extraction + verification
+- [x] OpenAPI → TypeScript client generation
+- [x] CheckPage + ResultPage with polling
 
-## Phase 2 — Evidence · Phase 3 — Images + URL · Phase 4 — Hardening · Phase 5 — Deploy-ready
+## Phase 2 — Evidence & Fact Check Tools API
+- [ ] Google Fact Check Tools API client (`claims:search`)
+- [ ] Combine existing human fact-checks with Gemini + Google Search grounding
+- [ ] Source credibility & confidence meter UI
+- [ ] Shareable result link copy button & metadata
 
+## Phase 3 — Images + URL · Phase 4 — Hardening · Phase 5 — Deploy-ready

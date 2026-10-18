@@ -44,8 +44,11 @@ public class CheckService {
         String text = request.text().trim();
         String hash = contentHasher.sha256Normalized(text);
 
-        Optional<FactCheck> cached = repository.findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
-                hash, CheckStatus.COMPLETED, Instant.now().minus(CACHE_TTL));
+        Optional<FactCheck> cached = repository
+                .findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
+                        hash, CheckStatus.COMPLETED, Instant.now().minus(CACHE_TTL))
+                .filter(existing -> existing.getModelVersion() == null
+                        || !existing.getModelVersion().endsWith("-demo"));
 
         if (cached.isPresent()) {
             FactCheck existing = cached.get();

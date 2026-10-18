@@ -4,6 +4,7 @@ import com.google.genai.Client;
 import com.google.genai.gaos.models.interactions.Content;
 import com.google.genai.gaos.models.interactions.CreateModelInteraction;
 import com.google.genai.gaos.models.interactions.CreateModelInteractionResponseFormat;
+import com.google.genai.gaos.models.interactions.GoogleSearch;
 import com.google.genai.gaos.models.interactions.Interaction;
 import com.google.genai.gaos.models.interactions.InteractionsInput;
 import com.google.genai.gaos.models.interactions.Model;
@@ -60,6 +61,7 @@ public class GeminiFactCheckAi implements FactCheckAi {
                 .model(Model.of(modelName))
                 .systemInstruction(PromptTemplates.SYSTEM_INSTRUCTION)
                 .input(InteractionsInput.of(safeInput))
+                .tools(List.of(new GoogleSearch()))
                 .responseFormat(responseFormat)
                 .build();
 
