@@ -1,6 +1,9 @@
 spring:
   application:
     name: veryfact
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:veryfact}
     username: ${POSTGRES_USER:veryfact}
@@ -9,6 +12,11 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+
+veryfact:
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-3.8-flash}
 
 server:
   port: 8080
