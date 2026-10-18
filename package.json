@@ -1,0 +1,30 @@
+{
+  "name": "veryfact",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": "true",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kingsmark16/VeryFact.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kingsmark16/VeryFact/issues"
+  },
+  "homepage": "https://github.com/kingsmark16/VeryFact#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0"
+  }
+}

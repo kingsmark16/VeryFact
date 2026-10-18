@@ -1,0 +1,15 @@
+# secrets
+.env
+
+# dependencies / build output
+node_modules/
+dist/
+target/
+
+# editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+.DS_Store
+Thumbs.db

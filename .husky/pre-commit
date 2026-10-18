@@ -1,0 +1,10 @@
+export PATH="$PWD/frontend/node_modules/.bin:$PATH"
+npx lint-staged
+
+# Java: check formatting only if backend Java files are staged
+if git diff --cached --name-only | grep -q '^backend/.*\.java$'; then
+  (cd backend && ./mvnw.cmd -q spotless:check) || {
+    echo "Java formatting issues. Run: cd backend; .\\mvnw.cmd spotless:apply"
+    exit 1
+  }
+fi
