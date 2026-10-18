@@ -13,7 +13,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations["createCheck"];
+    post: operations["createMultipartCheck"];
     delete?: never;
     options?: never;
     head?: never;
@@ -40,9 +40,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    CreateCheckRequest: {
-      text: string;
-    };
     CreateCheckResponse: {
       slug?: string;
       /** @enum {string} */
@@ -57,10 +54,14 @@ export interface components {
         | "FAILED";
       cached?: boolean;
     };
+    CreateCheckRequest: {
+      text: string;
+    };
     CheckResultDto: {
       slug?: string;
       /** @enum {string} */
       inputType?: "TEXT" | "URL" | "IMAGE" | "MIXED";
+      sourceUrl?: string;
       inputExcerpt?: string;
       language?: string;
       /** @enum {string} */
@@ -133,15 +134,21 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  createCheck: {
+  createMultipartCheck: {
     parameters: {
-      query?: never;
+      query?: {
+        text?: string;
+        url?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
     };
     requestBody: {
       content: {
+        "multipart/form-data": {
+          images?: string[];
+        };
         "application/json": components["schemas"]["CreateCheckRequest"];
       };
     };

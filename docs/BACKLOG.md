@@ -23,9 +23,15 @@
 - [x] Shareable result link copy button & metadata
 
 ## Phase 3 — Images + URL Extraction
-- [ ] URL article extractor (`Jsoup` + SSRF private-IP guard)
-- [ ] Multimodal image upload (`multipart/form-data`, max 4 × 5 MB, JPEG/PNG/WebP magic-byte check)
-- [ ] Gemini multimodal claim extraction & verification (text + URL + images)
-- [ ] Frontend `InputTabs` (Text / URL / Images) & `ImageDropzone` (drag-drop + clipboard paste)
+- [x] URL article extractor (`Jsoup` + SSRF private-IP guard)
+- [x] Multimodal image upload (`multipart/form-data`, max 4 × 5 MB, JPEG/PNG/WebP magic-byte check)
+- [x] Gemini multimodal claim extraction & verification (text + URL + images)
+- [x] Frontend `InputTabs` (Text / URL / Images) & `ImageDropzone` (drag-drop + clipboard paste)
 
-## Phase 4 — Hardening · Phase 5 — Deploy-ready
+## Phase 4 — Hardening
+- [ ] Per-IP rate limiting on `POST /api/checks` (10 checks/hour, `429` + `Retry-After`)
+- [ ] CORS configuration (`veryfact.cors.allowed-origins`)
+- [ ] Frontend `429` rate-limit feedback
+- [ ] Rate-limiter unit tests
+
+## Phase 5 — Deploy-ready

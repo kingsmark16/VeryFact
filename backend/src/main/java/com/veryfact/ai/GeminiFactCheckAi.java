@@ -5,6 +5,8 @@ import com.google.genai.gaos.models.interactions.Content;
 import com.google.genai.gaos.models.interactions.CreateModelInteraction;
 import com.google.genai.gaos.models.interactions.CreateModelInteractionResponseFormat;
 import com.google.genai.gaos.models.interactions.GoogleSearch;
+import com.google.genai.gaos.models.interactions.ImageContent;
+import com.google.genai.gaos.models.interactions.ImageContentMimeType;
 import com.google.genai.gaos.models.interactions.Interaction;
 import com.google.genai.gaos.models.interactions.InteractionsInput;
 import com.google.genai.gaos.models.interactions.Model;
@@ -19,6 +21,9 @@ import com.veryfact.check.domain.Verdict;
 import com.veryfact.check.dto.ClaimDto;
 import com.veryfact.check.dto.FactCheckMatchDto;
 import com.veryfact.check.dto.SourceDto;
+import com.veryfact.common.util.ImageValidator.ValidatedImage;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +44,17 @@ public class GeminiFactCheckAi implements FactCheckAi {
     }
 
     @Override
-    public AiVerificationOutput analyzeText(String text, List<FactCheckMatchDto> factChecks) {
+    public AiVerificationOutput analyzeSubmission(
+            String text, List<ValidatedImage> images, List<FactCheckMatchDto> factChecks) {
+        List<ValidatedImage> safeImages = images != null ? images : List.of();
         List<FactCheckMatchDto> safeFactChecks = factChecks != null ? factChecks : List.of();
+        String safeText = text != null ? text : "";
         String modelName =
                 properties.model() == null || properties.model().isBlank() ? "gemini-3.8-flash" : properties.model();
 
         if (properties.apiKey() == null || properties.apiKey().isBlank()) {
             log.info("GEMINI_API_KEY is not configured; returning local demo verification output.");
-            return fallbackDemoOutput(text, safeFactChecks, modelName + "-demo");
+            return fallbackDemoOutput(safeText, safeImages.size(), safeFactChecks, modelName + "-demo");
         }
 
         Client client = Client.builder().apiKey(properties.apiKey()).build();
@@ -57,12 +65,19 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .schema(PromptTemplates.verificationSchema())
                         .build()));
 
-        String safeInput = buildPromptInput(text, safeFactChecks);
+        List<Content> contents = new ArrayList<>();
+        contents.add(new TextContent(buildPromptInput(safeText, safeImages.size(), safeFactChecks)));
+        for (ValidatedImage img : safeImages) {
+            contents.add(ImageContent.builder()
+                    .data(Base64.getEncoder().encodeToString(img.bytes()))
+                    .mimeType(ImageContentMimeType.of(img.mimeType()))
+                    .build());
+        }
 
         CreateModelInteraction params = CreateModelInteraction.builder()
                 .model(Model.of(modelName))
                 .systemInstruction(PromptTemplates.SYSTEM_INSTRUCTION)
-                .input(InteractionsInput.of(safeInput))
+                .input(InteractionsInput.ofContent(contents))
                 .tools(List.of(new GoogleSearch()))
                 .responseFormat(responseFormat)
                 .build();
@@ -96,8 +111,14 @@ public class GeminiFactCheckAi implements FactCheckAi {
                 modelName);
     }
 
-    private String buildPromptInput(String text, List<FactCheckMatchDto> factChecks) {
-        StringBuilder sb = new StringBuilder("<article>\n").append(text).append("\n</article>");
+    private String buildPromptInput(String text, int imageCount, List<FactCheckMatchDto> factChecks) {
+        StringBuilder sb = new StringBuilder();
+        if (!text.isBlank()) {
+            sb.append("<article>\n").append(text).append("\n</article>");
+        } else if (imageCount > 0) {
+            sb.append(
+                    "<article>\nExtract and verify the factual claims shown in the attached image(s)/screenshot(s).\n</article>");
+        }
         if (!factChecks.isEmpty()) {
             sb.append("\n\n<known_fact_checks>\n");
             for (FactCheckMatchDto fc : factChecks) {
@@ -155,8 +176,9 @@ public class GeminiFactCheckAi implements FactCheckAi {
     }
 
     private AiVerificationOutput fallbackDemoOutput(
-            String text, List<FactCheckMatchDto> factChecks, String modelVersion) {
-        String preview = text.length() > 140 ? text.substring(0, 140) + "..." : text;
+            String text, int imageCount, List<FactCheckMatchDto> factChecks, String modelVersion) {
+        String base = !text.isBlank() ? text : "Uploaded " + imageCount + " image(s)";
+        String preview = base.length() > 140 ? base.substring(0, 140) + "..." : base;
         return new AiVerificationOutput(
                 "en",
                 Verdict.UNVERIFIABLE,

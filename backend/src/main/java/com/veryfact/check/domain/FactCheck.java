@@ -103,6 +103,10 @@ public class FactCheck {
         return sourceUrl;
     }
 
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
+    }
+
     public String getInputExcerpt() {
         return inputExcerpt;
     }

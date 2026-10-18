@@ -17,7 +17,10 @@ import com.veryfact.check.dto.CreateCheckRequest;
 import com.veryfact.check.dto.CreateCheckResponse;
 import com.veryfact.common.exception.ResourceNotFoundException;
 import com.veryfact.common.util.ContentHasher;
+import com.veryfact.common.util.ImageValidator;
 import com.veryfact.common.util.SlugGenerator;
+import com.veryfact.extractor.SsrfGuard;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 @ExtendWith(MockitoExtension.class)
 class CheckServiceTest {
@@ -39,7 +43,13 @@ class CheckServiceTest {
 
     @BeforeEach
     void setUp() {
-        checkService = new CheckService(repository, new ContentHasher(), new SlugGenerator(), checkWorker);
+        checkService = new CheckService(
+                repository,
+                new ContentHasher(),
+                new SlugGenerator(),
+                new ImageValidator(),
+                new SsrfGuard(),
+                checkWorker);
     }
 
     @Test
@@ -75,6 +85,23 @@ class CheckServiceTest {
         assertThat(response.cached()).isTrue();
         assertThat(response.slug()).isEqualTo("abc123XYZ0");
         verify(checkWorker, never()).processTextCheckAsync(any(), any());
+    }
+
+    @Test
+    void submitMultipartCheck_whenValidPngImage_savesImageCheckAndTriggersWorker() {
+        when(repository.findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
+                        any(), eq(CheckStatus.COMPLETED), any()))
+                .thenReturn(Optional.empty());
+
+        byte[] pngHeader = new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D};
+        MockMultipartFile file = new MockMultipartFile("images", "screenshot.png", "image/png", pngHeader);
+
+        CreateCheckResponse response = checkService.submitMultipartCheck(null, null, List.of(file));
+
+        assertThat(response.cached()).isFalse();
+        assertThat(response.status()).isEqualTo(CheckStatus.PENDING);
+        verify(repository).save(any(FactCheck.class));
+        verify(checkWorker).processSubmissionAsync(any(UUID.class), eq(""), eq(null), any());
     }
 
     @Test

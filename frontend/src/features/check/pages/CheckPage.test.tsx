@@ -27,4 +27,14 @@ describe("CheckPage", () => {
     );
     expect(button).toBeEnabled();
   });
+  it("switches to Article URL tab and enables submit for valid https URL", async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole("tab", { name: /article url/i }));
+
+    const button = screen.getByRole("button", { name: /check facts/i });
+    expect(button).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(/article url/i), "https://example.com/news/story");
+    expect(button).toBeEnabled();
+  });
 });

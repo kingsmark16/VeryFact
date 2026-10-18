@@ -10,6 +10,7 @@ import java.util.List;
 public record CheckResultDto(
         String slug,
         InputType inputType,
+        String sourceUrl,
         String inputExcerpt,
         String language,
         CheckStatus status,

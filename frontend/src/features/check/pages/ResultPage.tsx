@@ -69,6 +69,20 @@ export default function ResultPage() {
             </div>
             {confidencePct !== null && <Progress value={confidencePct} />}
             <p>{data.summary}</p>
+            {data.sourceUrl &&
+              (data.sourceUrl.startsWith("https://") || data.sourceUrl.startsWith("http://")) && (
+                <p className="text-xs text-muted-foreground">
+                  Source URL:{" "}
+                  <a
+                    href={data.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {data.sourceUrl}
+                  </a>
+                </p>
+              )}
           </section>
 
           {data.redFlags && data.redFlags.length > 0 && (

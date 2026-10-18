@@ -4,6 +4,10 @@ spring:
   threads:
     virtual:
       enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 22MB
   datasource:
     url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:veryfact}
     username: ${POSTGRES_USER:veryfact}
