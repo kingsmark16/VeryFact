@@ -81,18 +81,7 @@ public class GeminiFactCheckAi implements FactCheckAi {
             input = InteractionsInput.ofContent(contents);
         }
 
-        Interaction interaction;
-        try {
-            interaction = createInteractionWithRetry(client, modelName, input, responseFormat);
-        } catch (RuntimeException ex) {
-            if (isRateLimitOrTemporaryError(ex)) {
-                log.warn(
-                        "Gemini API free-tier quota reached on project; engaging silent evaluation fallback: {}",
-                        ex.getMessage());
-                return fallbackDemoOutput(safeText, safeImages.size(), safeFactChecks, modelName);
-            }
-            throw ex;
-        }
+        Interaction interaction = createInteractionWithRetry(client, modelName, input, responseFormat);
 
         String json = extractOutputText(interaction);
 
@@ -123,8 +112,11 @@ public class GeminiFactCheckAi implements FactCheckAi {
             String primaryModel,
             InteractionsInput input,
             CreateModelInteractionResponseFormat responseFormat) {
-        List<String> candidateModels =
-                List.of(primaryModel, "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview");
+        List<String> candidateModels = java.util.stream.Stream.of(
+                        primaryModel, "gemini-3.8-flash", "gemini-3-flash-preview")
+                .filter(m -> m != null && !m.isBlank())
+                .distinct()
+                .toList();
         RuntimeException lastException = null;
 
         for (String model : candidateModels) {
