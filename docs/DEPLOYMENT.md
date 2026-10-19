@@ -103,3 +103,4 @@ If you prefer deploying the full monorepo with 1 click:
    - Connect Railway's `${{Postgres.DATABASE_URL}}` to `SPRING_DATASOURCE_URL`.
    - Add `GEMINI_API_KEY`.
 4. Add a new service pointing to `frontend/` using Dockerfile (`frontend/Dockerfile` includes Nginx).
+

@@ -1,4 +1,4 @@
-import { useState, useRef, type SyntheticEvent } from "react";
+import { useState, useRef, useEffect, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/axios-client";
 import { Button } from "@/components/ui/button";
@@ -64,9 +64,21 @@ export default function CheckPage() {
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [images, setImages] = useState<File[]>([]);
+  const [isColdStarting, setIsColdStarting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
   const createCheck = useCreateCheck();
+
+  useEffect(() => {
+    if (!createCheck.isPending) {
+      return;
+    }
+    const timer = setTimeout(() => setIsColdStarting(true), 4000);
+    return () => {
+      clearTimeout(timer);
+      setIsColdStarting(false);
+    };
+  }, [createCheck.isPending]);
 
   const trimmedLength = text.trim().length;
   const trimmedUrl = url.trim();
@@ -330,44 +342,76 @@ export default function CheckPage() {
                     : `${images.length} / 4 screenshots selected`}
               </span>
 
-              <Button
-                type="submit"
-                disabled={!canSubmit || createCheck.isPending}
-                size="lg"
-                className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-7 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
-              >
-                {createCheck.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Analyzing claims…</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Check facts</span>
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </>
+              <div className="flex flex-col items-end gap-2">
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || createCheck.isPending}
+                  size="lg"
+                  className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-7 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
+                >
+                  {createCheck.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Analyzing claims…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Check facts</span>
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </Button>
+                {isColdStarting && (
+                  <p className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
+                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                    <span>
+                      Waking up cloud backend (Render free tier cold start takes ~35–45s)…
+                    </span>
+                  </p>
                 )}
-              </Button>
+              </div>
             </div>
 
             {/* Error Banner */}
-            {createCheck.error instanceof ApiError && (
-              <div
-                role="alert"
-                className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
-              >
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                <div>
-                  <p className="font-semibold">Unable to process check</p>
-                  <p className="mt-0.5 text-xs text-destructive/90">
-                    {createCheck.error.detail}
-                    {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
-                      ? ` (Rate limit active: retry in ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
-                      : ""}
-                  </p>
-                </div>
-              </div>
-            )}
+            {createCheck.error instanceof ApiError &&
+              (() => {
+                const detail = createCheck.error.detail || "";
+                const isTimeout =
+                  detail.toLowerCase().includes("timeout") ||
+                  createCheck.error.status === 504 ||
+                  createCheck.error.status === 502;
+                return (
+                  <div
+                    role="alert"
+                    className="flex items-start justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                      <div>
+                        <p className="font-semibold">
+                          {isTimeout ? "Cloud server warming up" : "Unable to process check"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-destructive/90">
+                          {isTimeout
+                            ? "The cloud server was sleeping (Render free tier cold start). It is now online! Please click 'Retry now' to submit."
+                            : detail}
+                          {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
+                            ? ` (Rate limit active: retry in ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {isTimeout && (
+                      <button
+                        type="submit"
+                        className="shrink-0 rounded-xl bg-destructive px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-destructive/90 cursor-pointer"
+                      >
+                        Retry now
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
           </form>
 
           {/* Quick Interactive Samples */}
