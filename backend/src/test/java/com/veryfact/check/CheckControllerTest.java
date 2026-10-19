@@ -3,6 +3,7 @@ package com.veryfact.check;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -42,6 +44,22 @@ class CheckControllerTest {
                 .andExpect(jsonPath("$.slug").value("slug123456"))
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.cached").value(false));
+    }
+
+    @Test
+    void createMultipartCheck_whenUrlOrImagesProvided_returns202Accepted() throws Exception {
+        when(checkService.submitMultipartCheck(any(), any(), any()))
+                .thenReturn(new CreateCheckResponse("slugMulti1", CheckStatus.PENDING, CheckStage.QUEUED, false));
+
+        MockMultipartFile image =
+                new MockMultipartFile("images", "screenshot.png", "image/png", new byte[] {1, 2, 3, 4});
+
+        mockMvc.perform(multipart("/api/checks")
+                        .file(image)
+                        .param("url", "https://example.com/news")
+                        .param("text", "Context note"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.slug").value("slugMulti1"));
     }
 
     @Test

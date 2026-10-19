@@ -59,8 +59,21 @@ public class CheckWorker {
 
             String combinedText = text != null ? text.trim() : "";
             if (url != null && !url.isBlank()) {
-                String extracted = articleExtractor.extractTextFromUrl(url);
-                combinedText = combinedText.isBlank() ? extracted : combinedText + "\n\n" + extracted;
+                try {
+                    String extracted = articleExtractor.extractTextFromUrl(url);
+                    String urlHeader = "Source URL: " + url + "\n\n" + extracted;
+                    combinedText = combinedText.isBlank() ? urlHeader : combinedText + "\n\n" + urlHeader;
+                } catch (IllegalArgumentException extractEx) {
+                    log.info(
+                            "Direct HTML extraction failed for id={} ({}); falling back to URL/headline verification.",
+                            checkId,
+                            extractEx.getMessage());
+                    String fallbackUrlContext = "Submitted Article URL: " + url
+                            + "\n(Note: Direct HTTP fetch of this URL failed or returned HTTP 404/403. "
+                            + "Verify whether this article actually exists on the publisher's site and fact-check the claim in the URL/context.)";
+                    combinedText =
+                            combinedText.isBlank() ? fallbackUrlContext : combinedText + "\n\n" + fallbackUrlContext;
+                }
             }
 
             check.setStage(CheckStage.SEARCHING_FACT_CHECKS);
@@ -96,7 +109,12 @@ public class CheckWorker {
             log.error("Fact check failed for id={}", checkId, ex);
             check.setStatus(CheckStatus.FAILED);
             check.setStage(CheckStage.FAILED);
-            check.setErrorMessage("Verification failed. Please try again later.");
+            if (ex.getMessage() != null && ex.getMessage().contains("429")) {
+                check.setErrorMessage(
+                        "Gemini API rate limit (HTTP 429) reached for the configured API key. Please wait ~60 seconds and try again.");
+            } else {
+                check.setErrorMessage("Verification failed. Please try again later.");
+            }
             check.setCompletedAt(Instant.now());
             repository.save(check);
         }

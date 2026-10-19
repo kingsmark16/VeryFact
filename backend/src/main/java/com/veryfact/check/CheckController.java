@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,7 +38,7 @@ public class CheckController {
     public ResponseEntity<CreateCheckResponse> createMultipartCheck(
             @RequestParam(name = "text", required = false) String text,
             @RequestParam(name = "url", required = false) String url,
-            @RequestPart(name = "images", required = false) List<MultipartFile> images) {
+            @RequestParam(name = "images", required = false) List<MultipartFile> images) {
         CreateCheckResponse response = checkService.submitMultipartCheck(text, url, images);
         HttpStatus status = response.cached() ? HttpStatus.OK : HttpStatus.ACCEPTED;
         return ResponseEntity.status(status).body(response);

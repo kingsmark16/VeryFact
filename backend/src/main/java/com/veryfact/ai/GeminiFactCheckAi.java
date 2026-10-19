@@ -65,27 +65,23 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .schema(PromptTemplates.verificationSchema())
                         .build()));
 
-        List<Content> contents = new ArrayList<>();
-        contents.add(new TextContent(buildPromptInput(safeText, safeImages.size(), safeFactChecks)));
-        for (ValidatedImage img : safeImages) {
-            contents.add(ImageContent.builder()
-                    .data(Base64.getEncoder().encodeToString(img.bytes()))
-                    .mimeType(ImageContentMimeType.of(img.mimeType()))
-                    .build());
+        String promptText = buildPromptInput(safeText, safeImages.size(), safeFactChecks);
+        InteractionsInput input;
+        if (safeImages.isEmpty()) {
+            input = InteractionsInput.of(promptText);
+        } else {
+            List<Content> contents = new ArrayList<>();
+            contents.add(new TextContent(promptText));
+            for (ValidatedImage img : safeImages) {
+                contents.add(ImageContent.builder()
+                        .data(Base64.getEncoder().encodeToString(img.bytes()))
+                        .mimeType(ImageContentMimeType.of(img.mimeType()))
+                        .build());
+            }
+            input = InteractionsInput.ofContent(contents);
         }
 
-        CreateModelInteraction params = CreateModelInteraction.builder()
-                .model(Model.of(modelName))
-                .systemInstruction(PromptTemplates.SYSTEM_INSTRUCTION)
-                .input(InteractionsInput.ofContent(contents))
-                .tools(List.of(new GoogleSearch()))
-                .responseFormat(responseFormat)
-                .build();
-
-        Interaction interaction = client.interactions
-                .create(CreateInteractionRequestBody.of(params))
-                .interaction()
-                .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
+        Interaction interaction = createInteractionWithRetry(client, modelName, input, responseFormat);
 
         String json = extractOutputText(interaction);
 
@@ -109,6 +105,81 @@ public class GeminiFactCheckAi implements FactCheckAi {
                 enrichedClaims,
                 parsed.redFlags() != null ? parsed.redFlags() : List.of(),
                 modelName);
+    }
+
+    private Interaction createInteractionWithRetry(
+            Client client,
+            String primaryModel,
+            InteractionsInput input,
+            CreateModelInteractionResponseFormat responseFormat) {
+        List<String> candidateModels = List.of(primaryModel, "gemini-3-flash-preview", "gemini-2.5-flash");
+        RuntimeException lastException = null;
+
+        for (String model : candidateModels) {
+            try {
+                CreateModelInteraction groundedParams = CreateModelInteraction.builder()
+                        .model(Model.of(model))
+                        .systemInstruction(PromptTemplates.SYSTEM_INSTRUCTION)
+                        .input(input)
+                        .tools(List.of(new GoogleSearch()))
+                        .responseFormat(responseFormat)
+                        .build();
+
+                return client.interactions
+                        .create(CreateInteractionRequestBody.of(groundedParams))
+                        .interaction()
+                        .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
+            } catch (RuntimeException ex) {
+                lastException = ex;
+                if (!isRateLimitError(ex)) {
+                    throw ex;
+                }
+                log.warn(
+                        "Gemini API 429 on model={} with GoogleSearch ({}); retrying ungrounded after 1.5s...",
+                        model,
+                        ex.getMessage());
+                sleepQuietly(1500);
+            }
+
+            try {
+                CreateModelInteraction ungroundedParams = CreateModelInteraction.builder()
+                        .model(Model.of(model))
+                        .systemInstruction(PromptTemplates.SYSTEM_INSTRUCTION)
+                        .input(input)
+                        .responseFormat(responseFormat)
+                        .build();
+
+                return client.interactions
+                        .create(CreateInteractionRequestBody.of(ungroundedParams))
+                        .interaction()
+                        .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
+            } catch (RuntimeException ex) {
+                lastException = ex;
+                if (!isRateLimitError(ex)) {
+                    throw ex;
+                }
+                log.warn(
+                        "Gemini API 429 on model={} ungrounded ({}); trying next fallback model...",
+                        model,
+                        ex.getMessage());
+                sleepQuietly(1500);
+            }
+        }
+
+        throw lastException != null ? lastException : new IllegalStateException("Gemini API request failed");
+    }
+
+    private boolean isRateLimitError(Throwable ex) {
+        return ex.getMessage() != null
+                && (ex.getMessage().contains("429") || ex.getMessage().contains("503"));
+    }
+
+    private void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private String buildPromptInput(String text, int imageCount, List<FactCheckMatchDto> factChecks) {
