@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from "react";
+import { useState, useRef, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router";
 import { ApiError } from "@/api/axios-client";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,15 @@ import {
   FileText,
   Link2,
   Image as ImageIcon,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
   Search,
   Lock,
   Loader2,
   AlertCircle,
+  Clipboard,
+  Trash2,
+  CheckCircle2,
 } from "lucide-react";
 
 type InputMode = "text" | "url" | "images";
@@ -25,24 +27,35 @@ type InputMode = "text" | "url" | "images";
 const MIN_LENGTH = 20;
 const MAX_LENGTH = 20000;
 
-const SAMPLE_PROMPTS = [
+interface SampleClaim {
+  mode: InputMode;
+  category: string;
+  title: string;
+  url?: string;
+  content: string;
+}
+
+const SAMPLE_PROMPTS: SampleClaim[] = [
   {
-    mode: "text" as const,
-    title: "Tesla flying car announcement",
+    mode: "text",
+    category: "Automotive",
+    title: "Tesla flying car claim",
     content:
       "Elon Musk confirmed that Tesla and SpaceX are unveiling a functional commercial flying car in 2028 equipped with thrusters.",
   },
   {
-    mode: "url" as const,
-    title: "Asteroid flyby report",
+    mode: "url",
+    category: "Science",
+    title: "Asteroid 2026-X flyby",
     url: "https://www.nasa.gov/news-release/asteroid-watch",
     content: "NASA confirms a harmless near-Earth asteroid passage this month.",
   },
   {
-    mode: "text" as const,
-    title: "Coffee & longevity claim",
+    mode: "text",
+    category: "Health",
+    title: "Coffee & longevity viral post",
     content:
-      "Viral health article claims that drinking 5 liters of coffee every day prevents cellular aging and makes humans immortal.",
+      "Viral health post claims that drinking 5 liters of coffee every day prevents cellular aging and makes humans immortal.",
   },
 ];
 
@@ -51,6 +64,7 @@ export default function CheckPage() {
   const [text, setText] = useState("");
   const [url, setUrl] = useState("");
   const [images, setImages] = useState<File[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
   const createCheck = useCreateCheck();
 
@@ -82,7 +96,7 @@ export default function CheckPage() {
     });
   }
 
-  function handleApplySample(sample: (typeof SAMPLE_PROMPTS)[number]) {
+  function handleApplySample(sample: SampleClaim) {
     setMode(sample.mode);
     if (sample.mode === "url" && sample.url) {
       setUrl(sample.url);
@@ -91,39 +105,52 @@ export default function CheckPage() {
       setText(sample.content);
       setUrl("");
     }
+    textareaRef.current?.focus();
   }
 
+  async function handlePasteClipboard() {
+    try {
+      const clipText = await navigator.clipboard.readText();
+      if (clipText) {
+        setText((prev) => (prev ? `${prev}\n${clipText}` : clipText));
+      }
+    } catch {
+      // Clipboard access denied or unsupported
+    }
+  }
+
+  // Circular character progress calculation
+  const charProgressPct = Math.min(100, Math.round((trimmedLength / MIN_LENGTH) * 100));
+
   return (
-    <div className="flex min-h-screen flex-col bg-linear-to-b from-blue-50/30 via-background to-background dark:from-slate-950 dark:via-background dark:to-background">
+    <div className="flex min-h-screen flex-col bg-background bg-dot-pattern">
       <Navbar />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
-        {/* Hero Section */}
-        <div className="mb-8 text-center sm:mb-10">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>AI-Powered Public Fact Checking</span>
+        {/* Editorial Masthead Hero */}
+        <div className="mb-8 space-y-3 text-center sm:mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50/70 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300">
+            <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+            <span>Public Verification Terminal</span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            Verify viral claims with{" "}
-            <span className="bg-linear-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              real evidence
-            </span>
-            .
+
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+            Check facts against accredited sources.
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground sm:text-lg">
-            Cross-check news stories, URLs, and social media screenshots against accredited
-            fact-checkers and live web sources in seconds.
+
+          <p className="mx-auto max-w-xl text-base text-muted-foreground sm:text-lg">
+            Verify viral claims, articles, or social media screenshots with Google Fact Check Tools
+            and Google Search grounding.
           </p>
         </div>
 
-        {/* Form Card */}
-        <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xs transition-shadow dark:shadow-none sm:p-8">
-          {/* Segmented Tab Controls */}
+        {/* Interactive Verification Console Card */}
+        <div className="rounded-3xl border border-border/90 bg-card p-6 shadow-xl shadow-slate-200/50 backdrop-blur-md transition-shadow dark:shadow-none sm:p-8">
+          {/* Segmented Mode Selector */}
           <div
             role="tablist"
             aria-label="Input type"
-            className="mb-6 grid grid-cols-3 rounded-xl border border-border/80 bg-muted/50 p-1 text-xs font-medium sm:text-sm"
+            className="mb-6 grid grid-cols-3 rounded-2xl border border-border/80 bg-muted/60 p-1.5 text-xs font-semibold sm:text-sm"
           >
             <Button
               type="button"
@@ -132,7 +159,7 @@ export default function CheckPage() {
               variant={mode === "text" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("text")}
-              className={`gap-1.5 rounded-lg py-2 transition-all ${
+              className={`gap-2 rounded-xl py-2.5 transition-all ${
                 mode === "text"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -141,6 +168,7 @@ export default function CheckPage() {
               <FileText className="h-4 w-4 shrink-0" />
               <span>Text</span>
             </Button>
+
             <Button
               type="button"
               role="tab"
@@ -148,7 +176,7 @@ export default function CheckPage() {
               variant={mode === "url" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("url")}
-              className={`gap-1.5 rounded-lg py-2 transition-all ${
+              className={`gap-2 rounded-xl py-2.5 transition-all ${
                 mode === "url"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -157,6 +185,7 @@ export default function CheckPage() {
               <Link2 className="h-4 w-4 shrink-0" />
               <span>Article URL</span>
             </Button>
+
             <Button
               type="button"
               role="tab"
@@ -164,186 +193,251 @@ export default function CheckPage() {
               variant={mode === "images" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("images")}
-              className={`gap-1.5 rounded-lg py-2 transition-all ${
+              className={`gap-2 rounded-xl py-2.5 transition-all ${
                 mode === "images"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <ImageIcon className="h-4 w-4 shrink-0" />
-              <span>Images / Screenshots</span>
+              <span>Screenshots</span>
             </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Mode: TEXT */}
             {mode === "text" && (
-              <div className="space-y-1.5">
-                <Textarea
-                  aria-label="Article or claim text"
-                  placeholder="Paste the statement, headline, or article excerpt you want to verify…"
-                  rows={8}
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  className="resize-y rounded-xl border-border/80 bg-background text-sm leading-relaxed transition-colors focus-visible:ring-2 focus-visible:ring-blue-500/20"
-                />
-                <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                  <span>Minimum {MIN_LENGTH} characters required</span>
-                  <span
-                    className={
-                      trimmedLength > 0 && trimmedLength < MIN_LENGTH
-                        ? "font-semibold text-amber-600"
-                        : ""
-                    }
-                  >
+              <div className="space-y-2">
+                <div className="relative">
+                  <Textarea
+                    ref={textareaRef}
+                    aria-label="Article or claim text"
+                    placeholder="Paste the statement, article body, or viral rumor you want to verify…"
+                    rows={8}
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    className="w-full resize-y rounded-2xl border-border/80 bg-background/90 p-4 text-sm leading-relaxed shadow-2xs transition-all focus-visible:border-blue-500 focus-visible:ring-4 focus-visible:ring-blue-500/15"
+                  />
+
+                  {/* Micro Quick Actions inside Textarea */}
+                  <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
+                    {text.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={handlePasteClipboard}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-2xs backdrop-blur-xs transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <Clipboard className="h-3 w-3" />
+                        <span>Paste</span>
+                      </button>
+                    )}
+                    {text.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setText("")}
+                        aria-label="Clear input text"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 px-2 py-1 text-xs font-medium text-muted-foreground shadow-2xs backdrop-blur-xs transition-colors hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    {trimmedLength >= MIN_LENGTH ? (
+                      <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Length requirement met</span>
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full bg-blue-600 transition-all duration-150"
+                            style={{ width: `${charProgressPct}%` }}
+                          />
+                        </div>
+                        <span>
+                          Need {Math.max(0, MIN_LENGTH - trimmedLength)} more character(s)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="font-mono">
                     {trimmedLength} / {MAX_LENGTH}
                   </span>
                 </div>
               </div>
             )}
 
+            {/* Mode: URL */}
             {mode === "url" && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <div className="space-y-1">
                   <input
                     type="url"
                     aria-label="Article URL"
-                    placeholder="https://example.com/news-story"
+                    placeholder="https://example.com/news-story-to-verify"
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
-                    className="w-full rounded-xl border border-border/80 bg-background px-4 py-2.5 text-sm shadow-xs transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-2xl border border-border/80 bg-background px-4 py-3 text-sm shadow-2xs transition-all focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                   />
                   <p className="px-1 text-xs text-muted-foreground">
-                    Public article link (SSRF protected)
+                    Public news URL. VeryFact extracts readable content with SSRF-safe redirects.
                   </p>
                 </div>
+
                 <Textarea
                   aria-label="Additional context (optional)"
-                  placeholder="Optional: specific claim, quote, or context about this link…"
+                  placeholder="Optional: add specific context, timestamp, or particular claim to inspect within this article…"
                   rows={3}
                   value={text}
                   onChange={(event) => setText(event.target.value)}
-                  className="rounded-xl border-border/80 bg-background text-sm leading-relaxed"
+                  className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
                 />
               </div>
             )}
 
+            {/* Mode: IMAGES */}
             {mode === "images" && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <ImageDropzone files={images} onChange={setImages} />
                 <Textarea
                   aria-label="Additional context (optional)"
-                  placeholder="Optional: specific claim or context about the uploaded screenshot(s)…"
+                  placeholder="Optional: add context about the screenshot(s), e.g., platform, viral date, or claimant…"
                   rows={3}
                   value={text}
                   onChange={(event) => setText(event.target.value)}
-                  className="rounded-xl border-border/80 bg-background text-sm leading-relaxed"
+                  className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
                 />
               </div>
             )}
 
-            {/* Action Bar */}
+            {/* Form Submission Footer */}
             <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs text-muted-foreground">
                 {mode === "text"
                   ? trimmedLength >= MIN_LENGTH
-                    ? "Ready to verify"
+                    ? "Ready for multi-source verification"
                     : `Enter at least ${Math.max(0, MIN_LENGTH - trimmedLength)} more character(s)`
                   : mode === "url"
                     ? trimmedUrl.startsWith("http")
                       ? "Ready to verify URL"
                       : "Enter a valid http/https URL"
-                    : `${images.length} / 4 images selected`}
+                    : `${images.length} / 4 screenshots selected`}
               </span>
 
               <Button
                 type="submit"
                 disabled={!canSubmit || createCheck.isPending}
                 size="lg"
-                className="w-full rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 px-6 font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:from-blue-700 hover:to-indigo-700 sm:w-auto"
+                className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-7 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
               >
                 {createCheck.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Analyzing…</span>
+                    <span>Analyzing claims…</span>
                   </>
                 ) : (
                   <>
                     <span>Check facts</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </>
                 )}
               </Button>
             </div>
 
-            {/* Error Message */}
+            {/* Error Banner */}
             {createCheck.error instanceof ApiError && (
               <div
                 role="alert"
-                className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-sm text-destructive"
+                className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
               >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <p>
-                  {createCheck.error.detail}
-                  {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
-                    ? ` (Retry after ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
-                    : ""}
-                </p>
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Unable to process check</p>
+                  <p className="mt-0.5 text-xs text-destructive/90">
+                    {createCheck.error.detail}
+                    {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
+                      ? ` (Rate limit active: retry in ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
+                      : ""}
+                  </p>
+                </div>
               </div>
             )}
           </form>
 
-          {/* Quick Samples Section */}
-          <div className="mt-6 border-t border-border/60 pt-5">
-            <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Try an example claim:
-            </p>
-            <div className="flex flex-wrap gap-2">
+          {/* Quick Interactive Samples */}
+          <div className="mt-7 border-t border-border/70 pt-5">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                Explore real investigation samples
+              </span>
+              <span className="text-[11px] text-muted-foreground">Click to load</span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {SAMPLE_PROMPTS.map((sample) => (
                 <button
                   key={sample.title}
                   type="button"
                   onClick={() => handleApplySample(sample)}
-                  className="rounded-lg border border-border/80 bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-blue-500/50 hover:bg-muted"
+                  className="group flex flex-col items-start rounded-xl border border-border/80 bg-muted/30 p-3 text-left transition-all hover:border-blue-500/50 hover:bg-muted/70 hover:shadow-2xs"
                 >
-                  {sample.title}
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 font-mono uppercase tracking-wider">
+                    {sample.category}
+                  </span>
+                  <span className="mt-0.5 text-xs font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {sample.title}
+                  </span>
+                  <span className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted-foreground">
+                    {sample.content}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Feature Cards Section */}
+        {/* Journalism & Verification Pillar Badges */}
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-5 shadow-xs backdrop-blur-xs">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-foreground">Accredited Fact-Checks</h3>
+            <h3 className="font-heading text-sm font-bold text-foreground">
+              Accredited Fact-Checks
+            </h3>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Queries the Google Fact Check Tools API for findings from verified journalists
-              (PolitiFact, AFP, FactCheck.org).
+              Direct integration with the Google Fact Check Tools API covering PolitiFact, AFP,
+              FactCheck.org, and signatories of the IFCN code of principles.
             </p>
           </div>
 
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-5 shadow-xs backdrop-blur-xs">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <Search className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-foreground">Live Search Grounding</h3>
+            <h3 className="font-heading text-sm font-bold text-foreground">Live Web Grounding</h3>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Gemini 3.8 Flash extracts sub-claims, detects rhetorical red flags, and checks against
-              real-time web citations.
+              Gemini 3.8 Flash decomposes multi-part assertions, checks for manipulated context or
+              logical fallacies, and links live primary sources.
             </p>
           </div>
 
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-5 shadow-xs backdrop-blur-xs">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Lock className="h-5 w-5" />
             </div>
-            <h3 className="text-sm font-semibold text-foreground">Privacy & Zero Logging</h3>
+            <h3 className="font-heading text-sm font-bold text-foreground">
+              Zero Retention & Privacy
+            </h3>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              No account needed. IP rate limiting uses ephemeral in-memory salted hashes, and no
-              client IPs or text are logged.
+              No account, no tracking cookies, and no IP address logs. Sliding-window rate limits
+              use in-memory salted SHA-256 hashes that reset per boot.
             </p>
           </div>
         </div>
