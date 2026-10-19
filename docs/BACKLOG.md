@@ -39,3 +39,8 @@
 - [x] Frontend multi-stage `Dockerfile` + `nginx.conf` (SPA fallback + `/api` reverse proxy)
 - [x] Full-stack `docker-compose.yml` (`postgres`, `backend`, `frontend` with healthchecks)
 - [x] Root `README.md` with architecture, setup, and AI workflow documentation
+
+## UI Redesign & Cloud Deployment
+- [x] Modern UI redesign (Truth-desk dot matrix, real thumbnail previews, character ring meter, animated verdict stamp)
+- [x] Cloud datasource & dynamic `$PORT` binding for containerized PaaS (Render, Railway, Fly.io)
+- [x] Step-by-step Cloud Deployment Guide (`docs/DEPLOYMENT.md`)

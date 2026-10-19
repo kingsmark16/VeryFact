@@ -23,7 +23,7 @@ export class ApiError extends Error {
 }
 
 export const axiosClient = axios.create({
-  baseURL: "/",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "/",
   headers: {
     Accept: "application/json",
   },

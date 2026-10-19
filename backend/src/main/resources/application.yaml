@@ -11,7 +11,7 @@ spring:
       max-file-size: 5MB
       max-request-size: 22MB
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:veryfact}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:veryfact}}
     username: ${POSTGRES_USER:veryfact}
     password: ${POSTGRES_PASSWORD:change-me}
   jpa:
@@ -30,4 +30,4 @@ veryfact:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
 server:
-  port: 8080
+  port: ${PORT:8080}
