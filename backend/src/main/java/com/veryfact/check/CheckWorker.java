@@ -109,14 +109,35 @@ public class CheckWorker {
             log.error("Fact check failed for id={}", checkId, ex);
             check.setStatus(CheckStatus.FAILED);
             check.setStage(CheckStage.FAILED);
-            if (ex.getMessage() != null && ex.getMessage().contains("429")) {
+            String fullError = buildErrorChain(ex);
+            if (isRateLimit(fullError)) {
                 check.setErrorMessage(
-                        "Gemini API rate limit (HTTP 429) reached for the configured API key. Please wait ~60 seconds and try again.");
+                        "Google Gemini API free-tier quota (HTTP 429/503) reached for this API key. Google AI Studio has a per-minute limit on free keys. Please wait ~60 seconds and try again.");
             } else {
-                check.setErrorMessage("Verification failed. Please try again later.");
+                check.setErrorMessage("Verification could not be completed: "
+                        + (ex.getMessage() != null ? ex.getMessage() : "Please try again later."));
             }
             check.setCompletedAt(Instant.now());
             repository.save(check);
         }
+    }
+
+    private String buildErrorChain(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        while (t != null) {
+            if (t.getMessage() != null) {
+                sb.append(" ").append(t.getMessage());
+            }
+            t = t.getCause();
+        }
+        return sb.toString().toLowerCase();
+    }
+
+    private boolean isRateLimit(String text) {
+        return text.contains("429")
+                || text.contains("503")
+                || text.contains("resource_exhausted")
+                || text.contains("quota")
+                || text.contains("overloaded");
     }
 }

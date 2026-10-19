@@ -112,7 +112,8 @@ public class GeminiFactCheckAi implements FactCheckAi {
             String primaryModel,
             InteractionsInput input,
             CreateModelInteractionResponseFormat responseFormat) {
-        List<String> candidateModels = List.of(primaryModel, "gemini-3-flash-preview", "gemini-2.5-flash");
+        List<String> candidateModels =
+                List.of(primaryModel, "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview");
         RuntimeException lastException = null;
 
         for (String model : candidateModels) {
@@ -131,11 +132,15 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
             } catch (RuntimeException ex) {
                 lastException = ex;
-                if (!isRateLimitError(ex)) {
+                if (isNotFoundError(ex)) {
+                    log.warn("Model={} not found or not permitted (404); skipping to next candidate...", model);
+                    continue;
+                }
+                if (!isRateLimitOrTemporaryError(ex)) {
                     throw ex;
                 }
                 log.warn(
-                        "Gemini API 429 on model={} with GoogleSearch ({}); retrying ungrounded after 1.5s...",
+                        "Gemini API 429/503 on model={} with GoogleSearch ({}); retrying ungrounded after 1.5s...",
                         model,
                         ex.getMessage());
                 sleepQuietly(1500);
@@ -155,11 +160,15 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
             } catch (RuntimeException ex) {
                 lastException = ex;
-                if (!isRateLimitError(ex)) {
+                if (isNotFoundError(ex)) {
+                    log.warn("Model={} ungrounded returned 404; skipping...", model);
+                    continue;
+                }
+                if (!isRateLimitOrTemporaryError(ex)) {
                     throw ex;
                 }
                 log.warn(
-                        "Gemini API 429 on model={} ungrounded ({}); trying next fallback model...",
+                        "Gemini API 429/503 on model={} ungrounded ({}); trying next fallback model...",
                         model,
                         ex.getMessage());
                 sleepQuietly(1500);
@@ -169,9 +178,23 @@ public class GeminiFactCheckAi implements FactCheckAi {
         throw lastException != null ? lastException : new IllegalStateException("Gemini API request failed");
     }
 
-    private boolean isRateLimitError(Throwable ex) {
-        return ex.getMessage() != null
-                && (ex.getMessage().contains("429") || ex.getMessage().contains("503"));
+    private boolean isRateLimitOrTemporaryError(Throwable ex) {
+        if (ex == null || ex.getMessage() == null) {
+            return false;
+        }
+        String msg = ex.getMessage().toLowerCase();
+        return msg.contains("429")
+                || msg.contains("503")
+                || msg.contains("resource_exhausted")
+                || msg.contains("quota")
+                || msg.contains("overloaded");
+    }
+
+    private boolean isNotFoundError(Throwable ex) {
+        if (ex == null || ex.getMessage() == null) {
+            return false;
+        }
+        return ex.getMessage().contains("404") || ex.getMessage().toLowerCase().contains("not found");
     }
 
     private void sleepQuietly(long millis) {
