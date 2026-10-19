@@ -35,7 +35,7 @@
 - [x] Rate-limiter unit tests
 
 ## Phase 5 — Deploy-ready
-- [ ] Backend multi-stage `Dockerfile` (Eclipse Temurin 25 JRE + non-root user)
-- [ ] Frontend multi-stage `Dockerfile` + `nginx.conf` (SPA fallback + `/api` reverse proxy)
-- [ ] Full-stack `docker-compose.yml` (`postgres`, `backend`, `frontend` with healthchecks)
-- [ ] Root `README.md` with architecture, setup, and AI workflow documentation
+- [x] Backend multi-stage `Dockerfile` (Eclipse Temurin 25 JRE + non-root user)
+- [x] Frontend multi-stage `Dockerfile` + `nginx.conf` (SPA fallback + `/api` reverse proxy)
+- [x] Full-stack `docker-compose.yml` (`postgres`, `backend`, `frontend` with healthchecks)
+- [x] Root `README.md` with architecture, setup, and AI workflow documentation
