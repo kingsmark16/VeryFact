@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, type SyntheticEvent } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { ApiError } from "@/api/axios-client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCheck } from "../api/check-api";
+import { useCreateCheck, useRecentChecks } from "../api/check-api";
 import { ImageDropzone } from "../components/ImageDropzone";
+import { VerdictBadge } from "../components/VerdictBadge";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import {
@@ -17,12 +18,34 @@ import {
   Clipboard,
   Trash2,
   CheckCircle2,
+  History,
 } from "lucide-react";
 
 type InputMode = "text" | "url" | "images";
 
 const MIN_LENGTH = 20;
 const MAX_LENGTH = 20000;
+
+function formatRelativeTime(dateString?: string): string {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getInputTypeIcon(type?: string) {
+  if (type === "URL") return Link2;
+  if (type === "IMAGE") return ImageIcon;
+  return FileText;
+}
 
 export default function CheckPage() {
   const [mode, setMode] = useState<InputMode>("text");
@@ -33,6 +56,7 @@ export default function CheckPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const navigate = useNavigate();
   const createCheck = useCreateCheck();
+  const { data: recentChecks, isLoading: isLoadingRecent } = useRecentChecks();
 
   useEffect(() => {
     if (!createCheck.isPending) {
@@ -91,7 +115,7 @@ export default function CheckPage() {
     <div className="flex min-h-screen flex-col justify-between bg-background bg-dot-pattern">
       <Navbar />
 
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-4 sm:px-6 sm:py-6">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-start px-4 py-4 sm:px-6 sm:py-6">
         {/* Editorial Masthead Hero */}
         <div className="mb-4 space-y-2 text-center sm:mb-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50/70 px-3 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300">
@@ -389,6 +413,93 @@ export default function CheckPage() {
               })()}
           </form>
         </div>
+
+        {/* Recent Checks Section */}
+        {recentChecks && recentChecks.length > 0 && (
+          <section aria-labelledby="recent-checks-heading" className="mt-6 w-full space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <h2
+                  id="recent-checks-heading"
+                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                >
+                  Recent checks
+                </h2>
+              </div>
+              <span className="text-[11px] text-muted-foreground">Community feed</span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {recentChecks.map((check) => {
+                const Icon = getInputTypeIcon(check.inputType);
+                return (
+                  <Link
+                    key={check.slug}
+                    to={`/r/${check.slug}`}
+                    className="group flex flex-col justify-between rounded-2xl border border-border/80 bg-card/90 p-3.5 shadow-2xs backdrop-blur-xs transition-all hover:border-blue-500/40 hover:bg-card hover:shadow-md hover:shadow-blue-500/5 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                          <span>{check.inputType || "TEXT"}</span>
+                          {check.createdAt && (
+                            <>
+                              <span className="text-border">•</span>
+                              <span>{formatRelativeTime(check.createdAt)}</span>
+                            </>
+                          )}
+                        </div>
+                        {check.overallVerdict && (
+                          <VerdictBadge
+                            verdict={check.overallVerdict}
+                            className="px-2 py-0 text-[10px]"
+                          />
+                        )}
+                      </div>
+
+                      <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground/90">
+                        {check.inputExcerpt || check.summary || "Fact check verification"}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2 text-[11px]">
+                      {check.confidence != null ? (
+                        <span className="text-muted-foreground">
+                          {Math.round(check.confidence * 100)}% confidence
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <span className="inline-flex items-center font-semibold text-blue-600 transition-transform group-hover:translate-x-0.5 dark:text-blue-400">
+                        <span>View report</span>
+                        <ArrowRight className="ml-1 h-3 w-3" />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {isLoadingRecent && (
+          <section className="mt-6 w-full space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <History className="h-4 w-4 animate-pulse text-muted-foreground/60" />
+              <div className="h-3 w-24 animate-pulse rounded-md bg-muted/60" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="h-28 animate-pulse rounded-2xl border border-border/50 bg-card/50 p-3.5"
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       <Footer />

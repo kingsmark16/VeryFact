@@ -10,9 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.veryfact.check.domain.CheckStage;
 import com.veryfact.check.domain.CheckStatus;
+import com.veryfact.check.domain.InputType;
+import com.veryfact.check.domain.Verdict;
 import com.veryfact.check.dto.CreateCheckResponse;
+import com.veryfact.check.dto.RecentCheckDto;
 import com.veryfact.common.exception.GlobalExceptionHandler;
 import com.veryfact.common.exception.ResourceNotFoundException;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -69,6 +74,27 @@ class CheckControllerTest {
                         .content("{\"text\":\"Too short\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Invalid Request"));
+    }
+
+    @Test
+    void getRecentChecks_returnsListOfRecentChecks() throws Exception {
+        RecentCheckDto dto = new RecentCheckDto(
+                "recent12345",
+                InputType.TEXT,
+                "Excerpt sample",
+                Verdict.MOSTLY_TRUE,
+                0.88,
+                "Summary sample",
+                Instant.parse("2026-10-24T12:00:00Z"));
+
+        when(checkService.getRecentChecks()).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/checks/recent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].slug").value("recent12345"))
+                .andExpect(jsonPath("$[0].inputType").value("TEXT"))
+                .andExpect(jsonPath("$[0].overallVerdict").value("MOSTLY_TRUE"))
+                .andExpect(jsonPath("$[0].confidence").value(0.88));
     }
 
     @Test

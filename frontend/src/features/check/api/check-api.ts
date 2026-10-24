@@ -5,6 +5,7 @@ import type { components } from "@/api/schema";
 export type CreateCheckRequest = components["schemas"]["CreateCheckRequest"];
 export type CreateCheckResponse = components["schemas"]["CreateCheckResponse"];
 export type CheckResult = components["schemas"]["CheckResultDto"];
+export type RecentCheck = components["schemas"]["RecentCheckDto"];
 export type Claim = components["schemas"]["ClaimDto"];
 export type Verdict = NonNullable<CheckResult["overallVerdict"]>;
 
@@ -57,5 +58,16 @@ export function useCheckResult(slug: string) {
       query.state.data?.status && TERMINAL_STATUSES.includes(query.state.data.status)
         ? false
         : 1500,
+  });
+}
+
+export function useRecentChecks() {
+  return useQuery({
+    queryKey: ["checks", "recent"],
+    queryFn: async () => {
+      const { data } = await axiosClient.get<RecentCheck[]>("/api/checks/recent");
+      return data;
+    },
+    staleTime: 30_000,
   });
 }

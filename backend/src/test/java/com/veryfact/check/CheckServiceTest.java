@@ -13,8 +13,10 @@ import com.veryfact.check.domain.CheckStatus;
 import com.veryfact.check.domain.FactCheck;
 import com.veryfact.check.domain.FactCheckRepository;
 import com.veryfact.check.domain.InputType;
+import com.veryfact.check.domain.Verdict;
 import com.veryfact.check.dto.CreateCheckRequest;
 import com.veryfact.check.dto.CreateCheckResponse;
+import com.veryfact.check.dto.RecentCheckDto;
 import com.veryfact.common.exception.ResourceNotFoundException;
 import com.veryfact.common.util.ContentHasher;
 import com.veryfact.common.util.ImageValidator;
@@ -102,6 +104,30 @@ class CheckServiceTest {
         assertThat(response.status()).isEqualTo(CheckStatus.PENDING);
         verify(repository).save(any(FactCheck.class));
         verify(checkWorker).processSubmissionAsync(any(UUID.class), eq(""), eq(null), any());
+    }
+
+    @Test
+    void getRecentChecks_returnsMappedRecentChecks() {
+        FactCheck check = new FactCheck(UUID.randomUUID(), "recentSlug1", "hash1", InputType.TEXT, "Sample excerpt");
+        check.setStatus(CheckStatus.COMPLETED);
+        check.setOverallVerdict(Verdict.FALSE);
+        check.setConfidence(0.92);
+        check.setSummary("This is completely false.");
+
+        when(repository.findTop6ByStatusAndOverallVerdictIsNotNullOrderByCreatedAtDesc(CheckStatus.COMPLETED))
+                .thenReturn(List.of(check));
+
+        List<RecentCheckDto> recent = checkService.getRecentChecks();
+
+        assertThat(recent).hasSize(1);
+        RecentCheckDto item = recent.getFirst();
+        assertThat(item.slug()).isEqualTo("recentSlug1");
+        assertThat(item.inputType()).isEqualTo(InputType.TEXT);
+        assertThat(item.inputExcerpt()).isEqualTo("Sample excerpt");
+        assertThat(item.overallVerdict()).isEqualTo(Verdict.FALSE);
+        assertThat(item.confidence()).isEqualTo(0.92);
+        assertThat(item.summary()).isEqualTo("This is completely false.");
+        assertThat(item.createdAt()).isEqualTo(check.getCreatedAt());
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.veryfact.check.dto.CheckAnalysisPayload;
 import com.veryfact.check.dto.CheckResultDto;
 import com.veryfact.check.dto.CreateCheckRequest;
 import com.veryfact.check.dto.CreateCheckResponse;
+import com.veryfact.check.dto.RecentCheckDto;
 import com.veryfact.common.exception.ResourceNotFoundException;
 import com.veryfact.common.util.ContentHasher;
 import com.veryfact.common.util.ImageValidator;
@@ -149,6 +150,19 @@ public class CheckService {
                 check.getModelVersion(),
                 check.getCreatedAt(),
                 check.getCompletedAt());
+    }
+
+    public List<RecentCheckDto> getRecentChecks() {
+        return repository.findTop6ByStatusAndOverallVerdictIsNotNullOrderByCreatedAtDesc(CheckStatus.COMPLETED).stream()
+                .map(check -> new RecentCheckDto(
+                        check.getSlug(),
+                        check.getInputType(),
+                        check.getInputExcerpt(),
+                        check.getOverallVerdict(),
+                        check.getConfidence(),
+                        check.getSummary(),
+                        check.getCreatedAt()))
+                .toList();
     }
 
     private Optional<FactCheck> findValidCached(String hash) {

@@ -44,3 +44,4 @@
 - [x] Modern UI redesign (Truth-desk dot matrix, real thumbnail previews, character ring meter, animated verdict stamp)
 - [x] Cloud datasource & dynamic `$PORT` binding for containerized PaaS (Render, Railway, Fly.io)
 - [x] Step-by-step Cloud Deployment Guide (`docs/DEPLOYMENT.md`)
+- [x] Recent checks community feed (`GET /api/checks/recent` + home page cards)

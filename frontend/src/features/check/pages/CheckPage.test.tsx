@@ -2,7 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { axiosClient } from "@/api/axios-client";
 import CheckPage from "./CheckPage";
 
 function renderPage() {
@@ -36,5 +37,25 @@ describe("CheckPage", () => {
 
     await userEvent.type(screen.getByLabelText(/article url/i), "https://example.com/news/story");
     expect(button).toBeEnabled();
+  });
+
+  it("renders recent checks when available", async () => {
+    vi.spyOn(axiosClient, "get").mockResolvedValueOnce({
+      data: [
+        {
+          slug: "test-slug-1",
+          inputType: "TEXT",
+          inputExcerpt: "Recent claim excerpt about green cheese",
+          overallVerdict: "FALSE",
+          confidence: 0.95,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText(/recent claim excerpt about green cheese/i)).toBeInTheDocument();
+    expect(screen.getByText("False")).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ package com.veryfact.check;
 import com.veryfact.check.dto.CheckResultDto;
 import com.veryfact.check.dto.CreateCheckRequest;
 import com.veryfact.check.dto.CreateCheckResponse;
+import com.veryfact.check.dto.RecentCheckDto;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,11 @@ public class CheckController {
         CreateCheckResponse response = checkService.submitMultipartCheck(text, url, images);
         HttpStatus status = response.cached() ? HttpStatus.OK : HttpStatus.ACCEPTED;
         return ResponseEntity.status(status).body(response);
+    }
+
+    @GetMapping("/recent")
+    public List<RecentCheckDto> getRecentChecks() {
+        return checkService.getRecentChecks();
     }
 
     @GetMapping("/{slug}")
