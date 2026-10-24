@@ -160,10 +160,6 @@ export default function ResultPage() {
               <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
               <span>← New check</span>
             </Link>
-
-            <span className="hidden text-xs text-muted-foreground font-mono sm:inline">
-              /r/{data.slug}
-            </span>
           </div>
 
           <div className="flex items-center gap-2.5">
