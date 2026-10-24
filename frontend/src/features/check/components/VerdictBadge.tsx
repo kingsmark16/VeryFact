@@ -58,6 +58,7 @@ const VERDICT_STYLES: Record<Verdict, VerdictConfig> = {
 export function VerdictBadge({ verdict, className }: { verdict?: Verdict; className?: string }) {
   if (!verdict) return null;
   const config = VERDICT_STYLES[verdict];
+  if (!config) return null;
   const Icon = config.icon;
 
   return (

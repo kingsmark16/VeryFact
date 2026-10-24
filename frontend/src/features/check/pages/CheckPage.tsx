@@ -500,6 +500,12 @@ export default function CheckPage() {
             </div>
           </section>
         )}
+
+        {!isLoadingRecent && recentChecks && recentChecks.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center text-xs text-muted-foreground">
+            No verified checks in the feed yet. Submit a claim above to see it appear here!
+          </div>
+        )}
       </main>
 
       <Footer />
