@@ -16,7 +16,6 @@ import {
   Layers,
   Sparkles,
   RotateCcw,
-  Cpu,
   FileCheck2,
 } from "lucide-react";
 
@@ -168,12 +167,6 @@ export default function ResultPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            {data.modelVersion && (
-              <span className="hidden items-center gap-1 rounded-full border border-border/80 bg-muted/50 px-2.5 py-0.5 text-[11px] font-mono text-muted-foreground md:inline-flex">
-                <Cpu className="h-3 w-3" />
-                <span>{data.modelVersion}</span>
-              </span>
-            )}
             <ShareButton />
           </div>
         </div>
