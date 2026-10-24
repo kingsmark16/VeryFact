@@ -88,34 +88,34 @@ export default function CheckPage() {
   const charProgressPct = Math.min(100, Math.round((trimmedLength / MIN_LENGTH) * 100));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background bg-dot-pattern">
+    <div className="flex min-h-screen flex-col justify-between bg-background bg-dot-pattern">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-4 sm:px-6 sm:py-6">
         {/* Editorial Masthead Hero */}
-        <div className="mb-8 space-y-3 text-center sm:mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50/70 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300">
-            <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
+        <div className="mb-4 space-y-2 text-center sm:mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50/70 px-3 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300">
+            <span className="flex h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
             <span>Public Verification Terminal</span>
           </div>
 
-          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl md:text-4xl">
             Check facts against accredited sources.
           </h1>
 
-          <p className="mx-auto max-w-xl text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto max-w-lg text-sm text-muted-foreground sm:text-base">
             Verify viral claims, articles, or social media screenshots with Google Fact Check Tools
             and Google Search grounding.
           </p>
         </div>
 
         {/* Interactive Verification Console Card */}
-        <div className="rounded-3xl border border-border/90 bg-card p-6 shadow-xl shadow-slate-200/50 backdrop-blur-md transition-shadow dark:shadow-none sm:p-8">
+        <div className="rounded-3xl border border-border/90 bg-card p-5 shadow-xl shadow-slate-200/50 backdrop-blur-md transition-shadow dark:shadow-none sm:p-7">
           {/* Segmented Mode Selector */}
           <div
             role="tablist"
             aria-label="Input type"
-            className="mb-6 grid grid-cols-3 rounded-2xl border border-border/80 bg-muted/60 p-1.5 text-xs font-semibold sm:text-sm"
+            className="mb-4 grid grid-cols-3 rounded-2xl border border-border/80 bg-muted/60 p-1 text-xs font-semibold sm:text-sm"
           >
             <Button
               type="button"
@@ -124,7 +124,7 @@ export default function CheckPage() {
               variant={mode === "text" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("text")}
-              className={`gap-2 rounded-xl py-2.5 transition-all ${
+              className={`gap-2 rounded-xl py-2 transition-all ${
                 mode === "text"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -141,7 +141,7 @@ export default function CheckPage() {
               variant={mode === "url" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("url")}
-              className={`gap-2 rounded-xl py-2.5 transition-all ${
+              className={`gap-2 rounded-xl py-2 transition-all ${
                 mode === "url"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -158,7 +158,7 @@ export default function CheckPage() {
               variant={mode === "images" ? "default" : "ghost"}
               size="sm"
               onClick={() => setMode("images")}
-              className={`gap-2 rounded-xl py-2.5 transition-all ${
+              className={`gap-2 rounded-xl py-2 transition-all ${
                 mode === "images"
                   ? "bg-background text-foreground shadow-xs hover:bg-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -169,7 +169,7 @@ export default function CheckPage() {
             </Button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Mode: TEXT */}
             {mode === "text" && (
               <div className="space-y-2">
@@ -182,10 +182,10 @@ export default function CheckPage() {
                     ref={textareaRef}
                     aria-label="Article or claim text"
                     placeholder="Paste the statement, article body, or viral rumor you want to verify…"
-                    rows={8}
+                    rows={5}
                     value={text}
                     onChange={(event) => setText(event.target.value)}
-                    className="w-full resize-y rounded-2xl border-border/80 bg-background/90 p-4 text-sm leading-relaxed shadow-2xs transition-all focus-visible:border-blue-500 focus-visible:ring-4 focus-visible:ring-blue-500/15"
+                    className="w-full resize-y rounded-2xl border-border/80 bg-background/90 p-3.5 text-sm leading-relaxed shadow-2xs transition-all focus-visible:border-blue-500 focus-visible:ring-4 focus-visible:ring-blue-500/15 min-h-[110px] max-h-[220px]"
                   />
 
                   {/* Micro Quick Actions inside Textarea */}
@@ -278,7 +278,7 @@ export default function CheckPage() {
                     id="url-context"
                     aria-label="Additional context (optional)"
                     placeholder="Optional: add specific context, timestamp, or particular claim to inspect within this article…"
-                    rows={3}
+                    rows={2}
                     value={text}
                     onChange={(event) => setText(event.target.value)}
                     className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
@@ -310,7 +310,7 @@ export default function CheckPage() {
                     id="images-context"
                     aria-label="Additional context (optional)"
                     placeholder="Optional: add context about the screenshot(s), e.g., platform, viral date, or claimant…"
-                    rows={3}
+                    rows={2}
                     value={text}
                     onChange={(event) => setText(event.target.value)}
                     className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
