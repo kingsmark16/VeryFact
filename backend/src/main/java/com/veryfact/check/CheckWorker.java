@@ -113,6 +113,9 @@ public class CheckWorker {
             if (isRateLimit(fullError)) {
                 check.setErrorMessage(
                         "Google Gemini API free-tier quota (HTTP 429/503) reached for this API key. Google AI Studio has a per-minute limit on free keys. Please wait ~60 seconds and try again.");
+            } else if (isAuthError(fullError)) {
+                check.setErrorMessage(
+                        "Google Gemini API Key is invalid or unauthorized (HTTP 401). Please check your GEMINI_API_KEY in .env or Google AI Studio.");
             } else {
                 check.setErrorMessage("Verification could not be completed: "
                         + (ex.getMessage() != null ? ex.getMessage() : "Please try again later."));
@@ -139,5 +142,13 @@ public class CheckWorker {
                 || text.contains("resource_exhausted")
                 || text.contains("quota")
                 || text.contains("overloaded");
+    }
+
+    private boolean isAuthError(String text) {
+        return text.contains("401")
+                || text.contains("unauthenticated")
+                || text.contains("unauthorized")
+                || text.contains("credentials_missing")
+                || text.contains("api_key_invalid");
     }
 }

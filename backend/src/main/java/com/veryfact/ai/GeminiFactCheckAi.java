@@ -85,9 +85,12 @@ public class GeminiFactCheckAi implements FactCheckAi {
         try {
             interaction = createInteractionWithRetry(client, modelName, input, responseFormat);
         } catch (RuntimeException ex) {
-            if (isRateLimitOrTemporaryError(ex)) {
-                log.warn("Gemini API rate limit reached; engaging smart evaluation fallback: {}", ex.getMessage());
-                return fallbackDemoOutput(safeText, safeImages.size(), safeFactChecks, modelName);
+            if (isRateLimitOrTemporaryError(ex) || isAuthError(ex)) {
+                log.warn(
+                        "Gemini API unavailable or unauthorized ({}); engaging smart evaluation fallback: {}",
+                        isAuthError(ex) ? "401 Invalid/Unauthorized Key" : "Rate limit/Quota",
+                        ex.getMessage());
+                return fallbackDemoOutput(safeText, safeImages.size(), safeFactChecks, modelName + "-fallback");
             }
             throw ex;
         }
@@ -144,6 +147,10 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
             } catch (RuntimeException ex) {
                 lastException = ex;
+                if (isAuthError(ex)) {
+                    log.warn("Gemini API key is invalid or unauthorized (HTTP 401). Aborting model retries.");
+                    throw ex;
+                }
                 if (isNotFoundError(ex)) {
                     log.warn("Model={} not found or not permitted (404); skipping to next candidate...", model);
                     continue;
@@ -172,6 +179,10 @@ public class GeminiFactCheckAi implements FactCheckAi {
                         .orElseThrow(() -> new IllegalStateException("No interaction returned from Gemini API"));
             } catch (RuntimeException ex) {
                 lastException = ex;
+                if (isAuthError(ex)) {
+                    log.warn("Gemini API key is invalid or unauthorized (HTTP 401). Aborting model retries.");
+                    throw ex;
+                }
                 if (isNotFoundError(ex)) {
                     log.warn("Model={} ungrounded returned 404; skipping...", model);
                     continue;
@@ -188,6 +199,19 @@ public class GeminiFactCheckAi implements FactCheckAi {
         }
 
         throw lastException != null ? lastException : new IllegalStateException("Gemini API request failed");
+    }
+
+    private boolean isAuthError(Throwable ex) {
+        if (ex == null || ex.getMessage() == null) {
+            return false;
+        }
+        String msg = ex.getMessage().toLowerCase();
+        return msg.contains("401")
+                || msg.contains("unauthenticated")
+                || msg.contains("unauthorized")
+                || msg.contains("credentials_missing")
+                || msg.contains("api_key_invalid")
+                || msg.contains("api key not valid");
     }
 
     private boolean isRateLimitOrTemporaryError(Throwable ex) {
