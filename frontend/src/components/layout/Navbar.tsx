@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ShieldCheck, Sparkles, ExternalLink } from "lucide-react";
+import { ShieldCheck, ExternalLink } from "lucide-react";
 
 export function Navbar() {
   return (
@@ -26,10 +26,6 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-3 py-1 text-xs text-muted-foreground md:flex">
-            <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Gemini 3.8 Flash + Fact Check Tools</span>
-          </div>
           <a
             href="https://github.com/kingsmark16/VeryFact"
             target="_blank"

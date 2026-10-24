@@ -12,9 +12,6 @@ import {
   Link2,
   Image as ImageIcon,
   ArrowRight,
-  ShieldCheck,
-  Search,
-  Lock,
   Loader2,
   AlertCircle,
   Clipboard,
@@ -26,38 +23,6 @@ type InputMode = "text" | "url" | "images";
 
 const MIN_LENGTH = 20;
 const MAX_LENGTH = 20000;
-
-interface SampleClaim {
-  mode: InputMode;
-  category: string;
-  title: string;
-  url?: string;
-  content: string;
-}
-
-const SAMPLE_PROMPTS: SampleClaim[] = [
-  {
-    mode: "text",
-    category: "Automotive",
-    title: "Tesla flying car claim",
-    content:
-      "Elon Musk confirmed that Tesla and SpaceX are unveiling a functional commercial flying car in 2028 equipped with thrusters.",
-  },
-  {
-    mode: "url",
-    category: "Science",
-    title: "Asteroid 2026-X flyby",
-    url: "https://www.nasa.gov/news-release/asteroid-watch",
-    content: "NASA confirms a harmless near-Earth asteroid passage this month.",
-  },
-  {
-    mode: "text",
-    category: "Health",
-    title: "Coffee & longevity viral post",
-    content:
-      "Viral health post claims that drinking 5 liters of coffee every day prevents cellular aging and makes humans immortal.",
-  },
-];
 
 export default function CheckPage() {
   const [mode, setMode] = useState<InputMode>("text");
@@ -106,18 +71,6 @@ export default function CheckPage() {
         if (data.slug) navigate(`/r/${data.slug}`);
       },
     });
-  }
-
-  function handleApplySample(sample: SampleClaim) {
-    setMode(sample.mode);
-    if (sample.mode === "url" && sample.url) {
-      setUrl(sample.url);
-      setText(sample.content);
-    } else {
-      setText(sample.content);
-      setUrl("");
-    }
-    textareaRef.current?.focus();
   }
 
   async function handlePasteClipboard() {
@@ -220,8 +173,12 @@ export default function CheckPage() {
             {/* Mode: TEXT */}
             {mode === "text" && (
               <div className="space-y-2">
+                <label htmlFor="claim-text" className="block text-xs font-semibold text-foreground">
+                  Statement or Claim Text
+                </label>
                 <div className="relative">
                   <Textarea
+                    id="claim-text"
                     ref={textareaRef}
                     aria-label="Article or claim text"
                     placeholder="Paste the statement, article body, or viral rumor you want to verify…"
@@ -287,9 +244,16 @@ export default function CheckPage() {
 
             {/* Mode: URL */}
             {mode === "url" && (
-              <div className="space-y-3.5">
-                <div className="space-y-1">
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="article-url"
+                    className="block text-xs font-semibold text-foreground"
+                  >
+                    Article URL
+                  </label>
                   <input
+                    id="article-url"
                     type="url"
                     aria-label="Article URL"
                     placeholder="https://example.com/news-story-to-verify"
@@ -302,74 +266,85 @@ export default function CheckPage() {
                   </p>
                 </div>
 
-                <Textarea
-                  aria-label="Additional context (optional)"
-                  placeholder="Optional: add specific context, timestamp, or particular claim to inspect within this article…"
-                  rows={3}
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
-                />
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="url-context"
+                    className="block text-xs font-semibold text-foreground"
+                  >
+                    Additional Context{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <Textarea
+                    id="url-context"
+                    aria-label="Additional context (optional)"
+                    placeholder="Optional: add specific context, timestamp, or particular claim to inspect within this article…"
+                    rows={3}
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
+                  />
+                </div>
               </div>
             )}
 
             {/* Mode: IMAGES */}
             {mode === "images" && (
-              <div className="space-y-3.5">
-                <ImageDropzone files={images} onChange={setImages} />
-                <Textarea
-                  aria-label="Additional context (optional)"
-                  placeholder="Optional: add context about the screenshot(s), e.g., platform, viral date, or claimant…"
-                  rows={3}
-                  value={text}
-                  onChange={(event) => setText(event.target.value)}
-                  className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
-                />
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Screenshots{" "}
+                    <span className="font-normal text-muted-foreground">(up to 4 images)</span>
+                  </label>
+                  <ImageDropzone files={images} onChange={setImages} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="images-context"
+                    className="block text-xs font-semibold text-foreground"
+                  >
+                    Additional Context{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <Textarea
+                    id="images-context"
+                    aria-label="Additional context (optional)"
+                    placeholder="Optional: add context about the screenshot(s), e.g., platform, viral date, or claimant…"
+                    rows={3}
+                    value={text}
+                    onChange={(event) => setText(event.target.value)}
+                    className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
+                  />
+                </div>
               </div>
             )}
 
             {/* Form Submission Footer */}
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs text-muted-foreground">
-                {mode === "text"
-                  ? trimmedLength >= MIN_LENGTH
-                    ? "Ready for multi-source verification"
-                    : `Enter at least ${Math.max(0, MIN_LENGTH - trimmedLength)} more character(s)`
-                  : mode === "url"
-                    ? trimmedUrl.startsWith("http")
-                      ? "Ready to verify URL"
-                      : "Enter a valid http/https URL"
-                    : `${images.length} / 4 screenshots selected`}
-              </span>
-
-              <div className="flex flex-col items-end gap-2">
-                <Button
-                  type="submit"
-                  disabled={!canSubmit || createCheck.isPending}
-                  size="lg"
-                  className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-7 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
-                >
-                  {createCheck.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Analyzing claims…</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Check facts</span>
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
-                </Button>
-                {isColdStarting && (
-                  <p className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                    <span>
-                      Waking up cloud backend (Render free tier cold start takes ~35–45s)…
-                    </span>
-                  </p>
+            <div className="flex flex-col items-center justify-center gap-2 pt-2">
+              <Button
+                type="submit"
+                disabled={!canSubmit || createCheck.isPending}
+                size="lg"
+                className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-8 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
+              >
+                {createCheck.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <span>Analyzing claims…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Check facts</span>
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </>
                 )}
-              </div>
+              </Button>
+              {isColdStarting && (
+                <p className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                  <span>Waking up cloud backend (Render free tier cold start takes ~35–45s)…</span>
+                </p>
+              )}
             </div>
 
             {/* Error Banner */}
@@ -413,77 +388,6 @@ export default function CheckPage() {
                 );
               })()}
           </form>
-
-          {/* Quick Interactive Samples */}
-          <div className="mt-7 border-t border-border/70 pt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
-                Explore real investigation samples
-              </span>
-              <span className="text-[11px] text-muted-foreground">Click to load</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-              {SAMPLE_PROMPTS.map((sample) => (
-                <button
-                  key={sample.title}
-                  type="button"
-                  onClick={() => handleApplySample(sample)}
-                  className="group flex flex-col items-start rounded-xl border border-border/80 bg-muted/30 p-3 text-left transition-all hover:border-blue-500/50 hover:bg-muted/70 hover:shadow-2xs"
-                >
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 font-mono uppercase tracking-wider">
-                    {sample.category}
-                  </span>
-                  <span className="mt-0.5 text-xs font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    {sample.title}
-                  </span>
-                  <span className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted-foreground">
-                    {sample.content}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Journalism & Verification Pillar Badges */}
-        <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
-          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <h3 className="font-heading text-sm font-bold text-foreground">
-              Accredited Fact-Checks
-            </h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Direct integration with the Google Fact Check Tools API covering PolitiFact, AFP,
-              FactCheck.org, and signatories of the IFCN code of principles.
-            </p>
-          </div>
-
-          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-              <Search className="h-5 w-5" />
-            </div>
-            <h3 className="font-heading text-sm font-bold text-foreground">Live Web Grounding</h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Gemini 3.8 Flash decomposes multi-part assertions, checks for manipulated context or
-              logical fallacies, and links live primary sources.
-            </p>
-          </div>
-
-          <div className="space-y-2 rounded-2xl border border-border/70 bg-card/60 p-5 shadow-2xs backdrop-blur-xs">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Lock className="h-5 w-5" />
-            </div>
-            <h3 className="font-heading text-sm font-bold text-foreground">
-              Zero Retention & Privacy
-            </h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              No account, no tracking cookies, and no IP address logs. Sliding-window rate limits
-              use in-memory salted SHA-256 hashes that reset per boot.
-            </p>
-          </div>
         </div>
       </main>
 
