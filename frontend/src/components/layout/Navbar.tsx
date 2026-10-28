@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ShieldCheck, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 export function Navbar() {
   return (
@@ -9,9 +9,11 @@ export function Navbar() {
           to="/"
           className="group flex items-center gap-2.5 transition-opacity hover:opacity-90"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 transition-transform group-hover:scale-105">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
+          <img
+            src="/Icon.png"
+            alt="VeryFact logo"
+            className="h-9 w-9 rounded-xl object-contain transition-transform group-hover:scale-105"
+          />
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold tracking-tight">VeryFact</span>
