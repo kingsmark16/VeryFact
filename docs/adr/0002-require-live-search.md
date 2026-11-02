@@ -1,5 +1,9 @@
 # Require live Google Search evidence
 
+**Status: Accepted principle; original provider route and loading UI amended.**
+
+Current behavior (2026-11-02): ADR 0004 makes SerpApi retrieval plus two tool-free Gemini requests the default route. Native Gemini grounding remains explicit configuration. ADR 0006 replaces stage counts with one server-activity message and an orbital animation. The deadline covers AI/search work, while submitted-URL extraction and optional Fact Check lookup precede it. The no-demo/no-ungrounded-fallback and confirmed-search cache rules remain in force.
+
 Date: 2026-11-02
 
 ## Context

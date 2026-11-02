@@ -1,232 +1,115 @@
 # VeryFact
 
-> **AI-Powered Public Fact-Checking Platform**  
-> Verify viral claims, suspicious news links, and social media screenshots against Google Fact Check Tools and Google Gemini (`gemini-3.5-flash-lite`) with Google Search grounding — instantly producing shareable, citation-backed verdict reports.
+VeryFact is a public, account-free fact checker for pasted text, public article URLs, and screenshots. It produces shareable verdict reports with explanations and source links. AI can make mistakes; read the evidence before sharing a report.
 
----
+## Current features
 
-## Highlights
+- Three input modes: text (20–20,000 characters), an HTTP(S) article URL, or up to four JPEG/PNG/WebP images (5 MiB each). URL and image modes accept optional text context.
+- Live Google results through SerpApi, evaluated by Gemini. The application default is `gemini-3.5-flash-lite`; native Gemini Google Search is an explicitly configured alternative.
+- Optional Google Fact Check Tools lookup supplies published fact-check leads. Missing optional credentials or lookup failures do not stop verification.
+- Public reports at `/r/{slug}` with overall and per-claim verdicts, explanations, confidence, evidence links, and notes. Reports support claim-category filtering and collapsible evidence/submission sections.
+- A centered orbital loading indicator shows actual server activity. Its pause control pauses animation only. There are no estimated percentages or simulated stages.
+- The homepage shows up to three recent reports when available; the API returns up to six completed reports.
+- Matching completed reports marked with confirmed-search provenance can be reused for one hour. Provider failures, invalid reports, and missing search evidence fail visibly. There are no demo verdicts or automatic provider fallbacks.
+- English and Filipino interface resources, keyboard navigation, reduced-motion support, and clipboard sharing with manual-copy guidance on failure. The interface currently initializes in English and has no language selector.
 
-- **Multimodal Submissions:** Fact-check raw article text, public article URLs (with SSRF protection), or uploaded screenshots/images (PNG, JPEG, WebP).
-- **Double-Layer Verification:**
-  1. Searches the official **Google Fact Check Tools API** for verified claims from accredited journalistic fact-checkers (PolitiFact, AFP, FactCheck.org, etc.).
-  2. Synthesizes evidence using **Gemini 3.5 Flash-Lite** using **Google Search results via SerpApi** to identify claims, evaluate truthfulness, detect red flags, and cite primary sources.
-- **Explainable Verdicts:** Every check produces an overall verdict badge (`True`, `Mostly true`, `Mixed`, `Mostly false`, `False`, `Unverifiable`), a confidence percentage, manipulative red flags, and claim-by-claim breakdowns with primary source links.
-- **Shareable Reports:** Permanent, public result URLs (`/r/{slug}`) that anyone can inspect or share without logging in.
-- **Privacy & Security First:**
-  - Zero authentication required.
-  - No user content or client IP addresses persisted to disk or logged.
-  - In-memory sliding-window IP rate limiting uses salted SHA-256 hashes generated from an ephemeral per-boot salt.
-  - Multi-hop SSRF protection blocks private IP ranges, loopbacks, link-local addresses, and AWS/GCP cloud metadata endpoints.
-  - Content-hash deduplication (SHA-256) returns cached results for identical submissions within one hour when Google Search execution was confirmed, avoiding redundant AI calls while limiting stale reuse.
+## Data and privacy
 
----
+Checks are public. PostgreSQL stores submission excerpts (first 500 text characters plus an ellipsis when truncated), submitted URLs, content hashes, report contents, status, timestamps, and model provenance. Reports and recent-check responses expose excerpts. Uploaded image bytes and full raw submission bodies are not stored as separate database fields; generated reports can repeat submitted material. No report deletion or retention cleanup is implemented.
 
-## Architecture
+Application-owned verification logs omit submitted content, raw provider errors, API keys, and client IPs. Avoid enabling framework request/body debugging for real submissions. The rate limiter keeps salted IP hashes in memory. Hosting/proxy access logs have separate settings. Gemini receives submission text/images; SerpApi receives generated search queries; publishers receive page requests. Do not submit personal information.
 
-```mermaid
-flowchart TD
-    User["User Browser"] --> |HTTP / SPA| Nginx["Nginx Reverse Proxy (:3000)"]
-    Nginx --> |Static Assets| ReactApp["React 19 + Vite 8 SPA"]
-    Nginx --> |/api/*| SpringBoot["Spring Boot 4.1 (Java 25) (:8080)"]
+## Stack
 
-    subgraph Backend Services
-        SpringBoot --> |Async Worker / Virtual Threads| CheckWorker["CheckWorker"]
-        CheckWorker --> |SSRF Guard & Jsoup| WebFetch["Public Web (Article URL)"]
-        CheckWorker --> |claims:search| FactCheckAPI["Google Fact Check Tools API"]
-        CheckWorker --> |Grounded Search| GeminiAPI["Google Gemini 3.5 Flash-Lite"]
-        SpringBoot --> |Flyway Migrations & JPA| Postgres[("PostgreSQL 18 (:5432)")]
-    end
-```
+| Area     | Implementation                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------- |
+| Backend  | Spring Boot 4.1.1, Java 25 virtual threads, Maven wrapper, JPA, Flyway, Google Gen AI SDK, Jsoup  |
+| Database | PostgreSQL 18 in local Compose                                                                    |
+| Frontend | React 19, Vite 8, TypeScript 6, Tailwind CSS v4, shadcn/Base UI, TanStack Query, Axios, i18next   |
+| Quality  | JUnit/AssertJ, Testcontainers, Vitest/Testing Library, Spotless, Oxlint, Prettier, GitHub Actions |
 
----
+## Local development
 
-## Tech Stack
+Install Java 25, Node.js 24, and Docker with Compose. From the repository root in PowerShell:
 
-| Layer | Technologies |
-|---|---|
-| **Backend** | Spring Boot 4.1.1, Java 25 (Virtual Threads), Maven Wrapper, PostgreSQL 18, Flyway, Spring Data JPA, Hibernate 7, Official Google Gen AI Java SDK (`com.google.genai:google-genai`), Jsoup, Spotless (`palantirJavaFormat`), SpringDoc OpenAPI |
-| **Frontend** | React 19, Vite 8, TypeScript 6, Tailwind CSS v4, Base UI (shadcn/ui), TanStack Query, Axios, Vitest, Oxlint, Prettier |
-| **DevOps / Quality** | Docker & Docker Compose, Multi-stage Dockerfiles, Nginx 1.29, Husky pre-commit hooks, lint-staged, GitHub Actions CI |
-
----
-
-## AI-Assisted Engineering Workflow
-
-VeryFact was architected and built using an agentic pair-programming workflow:
-- **Agent Instructions & Skill System:** Hierarchical [`AGENTS.md`](./AGENTS.md) files in root, `backend/`, and `frontend/` establish coding conventions, strict definition of done, and privacy policies. Reusable skills in [`.agents/skills/`](./.agents/skills/) automate tasks like API contract synchronization ([`sync-api-contract`](./.agents/skills/sync-api-contract/SKILL.md)) and adding endpoints ([`add-api-endpoint`](./.agents/skills/add-api-endpoint/SKILL.md)).
-- **Contract-Driven API Sync:** OpenAPI specs in `contracts/openapi.json` automatically generate type-safe TypeScript interfaces (`frontend/src/api/schema.d.ts`), preventing frontend-backend API drift.
-- **Architecture Decision Records:** Core technical choices (e.g. Java 25 Virtual Threads, official Google Gen AI Java SDK, privacy-first IP hashing) are documented in [`docs/adr/`](./docs/adr/).
-- **Automated Quality Gates:** Pre-commit hooks via Husky, Spotless, Oxlint, and Prettier enforce formatting and linting rules on every commit.
-
----
-
-## Quickstart
-
-### Prerequisites
-- **Git**
-- **Docker Desktop** (or Docker engine + Compose)
-- **Java 25 JDK** & **Node.js 24+** (for local development)
-- **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/app/apikey))
-
-### 1. Clone & Configure Environment
-
-```bash
-git clone https://github.com/kingsmark16/VeryFact.git
-cd VeryFact
-cp .env.example .env
-```
-
-Edit `.env` and add your Gemini API key:
-```ini
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-*(Optional: configure `GOOGLE_FACTCHECK_API_KEY` separately for Fact Check Tools. Without it, the optional lookup is skipped; Gemini Google Search still runs.)*
-
----
-
-### 2. Run with Docker Compose (Full Stack)
-
-To build and run all 3 services (**PostgreSQL 18**, **Spring Boot 4.1**, and **React 19 + Nginx**) with a single command:
-
-```bash
-docker compose --profile fullstack up --build
-```
-
-- **Frontend:** [http://localhost:3000](http://localhost:3000)
-- **Backend API:** [http://localhost:8080/api/checks](http://localhost:8080/api/checks)
-- **Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-
----
-
-### 3. Run for Local Development
-
-#### Start Database
-```bash
+```powershell
+Copy-Item .env.example .env
 docker compose up -d
 ```
 
-#### Run Backend
-```bash
+Set these values in the ignored `.env` file:
+
+```dotenv
+GEMINI_API_KEY=your-gemini-key
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_REQUEST_TIMEOUT=60s
+GOOGLE_SEARCH_PROVIDER=serpapi
+SERPAPI_API_KEY=your-serpapi-key
+```
+
+`GOOGLE_FACTCHECK_API_KEY` is optional and never falls back to the Gemini key. Provider access and quotas belong to the configured accounts; the app does not enable billing or guarantee a free allowance. Restart the backend after configuration changes.
+
+Run the backend and frontend in separate terminals:
+
+```powershell
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
 
-#### Run Frontend
-```bash
+```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Spring imports `.env` from its working directory and parent directory. Vite proxies `/api` to `http://localhost:8080`.
 
----
+- App: <http://localhost:5173>
+- Swagger: <http://localhost:8080/swagger-ui.html>
+- Health: <http://localhost:8080/actuator/health>
 
-## Verification & Testing
+For containers, see the [deployment guide](docs/DEPLOYMENT.md). The base Compose file has an older model fallback and omits SerpApi configuration forwarding; the guide includes a working override.
 
-Run full CI verification suites locally:
+## Checks
 
-```bash
-# Backend (unit tests, web slice tests, spotless check)
+```powershell
 cd backend
 .\mvnw.cmd verify
+```
 
-# Frontend (oxlint, prettier check, typescript check, vitest, production build)
+```powershell
 cd frontend
 npm run check
 ```
 
----
+Backend integration tests require Docker and currently use `postgres:latest`. Verification also exports `contracts/openapi.json`. Frontend checks run linting, formatting, type checks, tests, and the production build. CI has separate backend/frontend jobs; it does not currently enforce generated-contract drift. See the [backend guide](backend/README.md) and [frontend guide](frontend/README.md).
 
-## API Reference
+## HTTP API
 
-### Submit a Check
-```http
-POST /api/checks
-```
+| Method | Path                 | Behavior                                                                                                                            |
+| ------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/checks`        | JSON `{ "text": "..." }` or multipart `text`, `url`, repeated `images` fields. Returns `202` for new work or `200` for a cache hit. |
+| `GET`  | `/api/checks/{slug}` | Status, stage, submission excerpt, and report or failure details.                                                                   |
+| `GET`  | `/api/checks/recent` | Up to six completed reports with a verdict, newest creation time first.                                                             |
 
-**JSON (Text Submission):**
+Example new-submission response:
+
 ```json
 {
-  "text": "Breaking: NASA confirms asteroid 2026-X will pass between Earth and Moon."
-}
-```
-
-**Multipart Form (URL and/or Images):**
-- `url`: `https://example.com/news-story`
-- `text`: (optional context)
-- `images`: (1-4 image files, JPEG/PNG/WebP, max 5 MB each)
-
-**Response (`202 Accepted`):**
-```json
-{
-  "slug": "k7X9p2Lm1A",
-  "status": "PROCESSING",
-  "stage": "SEARCHING_FACT_CHECKS",
+  "slug": "exampleSlug",
+  "status": "PENDING",
+  "stage": "QUEUED",
   "cached": false
 }
 ```
 
-### Get Check Results
-```http
-GET /api/checks/{slug}
-```
+Sources contain `title`, `url`, and `publisher`. Verdicts are `TRUE`, `MOSTLY_TRUE`, `MIXED`, `MOSTLY_FALSE`, `FALSE`, `UNVERIFIABLE`, and `SATIRE_OR_OPINION`. Confidence is a model estimate from 0 to 1, not a measured probability of correctness. See the [architecture](docs/ARCHITECTURE.md) and generated [OpenAPI contract](contracts/openapi.json).
 
-**Response (`200 OK`):**
-```json
-{
-  "slug": "k7X9p2Lm1A",
-  "inputType": "URL",
-  "status": "COMPLETED",
-  "stage": "COMPLETED",
-  "overallVerdict": "MOSTLY_TRUE",
-  "confidence": 0.88,
-  "summary": "Asteroid 2026-X did pass safely between the Earth and Moon on...",
-  "claims": [
-    {
-      "claim": "NASA confirmed asteroid 2026-X trajectory.",
-      "verdict": "TRUE",
-      "confidence": 0.95,
-      "explanation": "NASA JPL Asteroid Watch published orbital tracking data confirming the flyby.",
-      "sources": [
-        {
-          "title": "NASA Asteroid Watch",
-          "url": "https://www.jpl.nasa.gov/asteroid-watch",
-          "domain": "jpl.nasa.gov"
-        }
-      ]
-    }
-  ],
-  "redFlags": []
-}
-```
+## Documentation
 
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-
-### Free Google results with Gemini
-
-The default route retrieves Google Search results through **SerpApi**, then uses
-**Gemini 3.5 Flash-Lite** basic generation to evaluate the evidence. Configure:
-
-```dotenv
-GEMINI_MODEL=gemini-3.5-flash-lite
-GOOGLE_SEARCH_PROVIDER=serpapi
-SERPAPI_API_KEY=your-free-serpapi-key
-```
-
-Use a SerpApi Free Plan account (currently 250 searches/month). Each uncached
-check uses one or two searches plus two Gemini requests. Both providers' limits
-apply; identical confirmed reports can be reused for one hour. Missing keys or
-exhausted allowances produce failures, with no automatic paid fallback.
-Restart the backend after changing environment variables.
-
-Native Gemini grounding is optional via `GOOGLE_SEARCH_PROVIDER=gemini`; Gemini
-3 built-in Search needs eligible API billing. Legacy Gemini 2.5 Search is limited
-to eligible existing users, even when a quota row is visible.
+- [Product specification](docs/PRODUCT_SPEC.md): implemented user experience and limits.
+- [Architecture](docs/ARCHITECTURE.md): pipeline, API, persistence, and failure behavior.
+- [Deployment](docs/DEPLOYMENT.md): configuration, containers, hosting, and validation.
+- [Backlog](docs/BACKLOG.md): delivered work and remaining gaps.
+- [Decision records](docs/adr/): historical decisions and later amendments.
+- [Agent instructions](AGENTS.md) and [repository rules](.agents/rules/): contribution conventions.

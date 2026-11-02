@@ -1,5 +1,9 @@
 # Separate Google search retrieval from Gemini generation
 
+**Status: Accepted current default route.**
+
+Documentation clarification (2026-11-02): the account plan, allowance, billing state, and latency below record the implementation-time investigation. They are not maintained pricing or availability guarantees. Required credentials and quotas must be checked in the deployment account. The base Compose file does not yet forward the new search settings; DEPLOYMENT.md supplies a local override. Current model provenance is `<configured-model>-serpapi-search-v1`.
+
 Date: 2026-11-02
 
 ## Context
@@ -52,6 +56,7 @@ about 9.4 seconds and returned source URLs. This is one sample, not a latency
 guarantee. The account was confirmed on the free plan before the live check.
 
 References:
+
 - https://serpapi.com/pricing
 - https://serpapi.com/search-api
 - https://serpapi.com/account-api

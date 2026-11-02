@@ -1,114 +1,96 @@
-# Backlog
+# VeryFact — Backlog and delivery status
 
-## Phase 0 — Foundation
-- [x] Monorepo, git, GitHub
-- [x] Postgres 18 via Docker Compose
-- [x] Backend skeleton + Spotless
-- [x] Frontend skeleton + Tailwind v4 + shadcn + Oxlint + Vitest
-- [x] AGENTS.md, rules, docs
-- [x] Pre-commit hooks
-- [x] CI
+Last synchronized with the repository: 2026-11-02. Checked items describe code in
+this repository; they do not prove that a hosted environment runs that code.
+Historical provider-account observations are recorded in ADRs, not deployment guarantees.
 
-## Phase 1 — Text check MVP
-- [x] Flyway V1 schema + Check entity/repository
-- [x] POST /api/checks (text) + GET /api/checks/{slug}
-- [x] Async worker + Gemini claim extraction + verification
-- [x] OpenAPI → TypeScript client generation
-- [x] CheckPage + ResultPage with polling
+## Foundation and quality
 
-## Phase 2 — Evidence & Fact Check Tools API
-- [x] Google Fact Check Tools API client (`claims:search`)
-- [x] Combine existing human fact-checks with Gemini + Google Search grounding
-- [x] Source credibility & confidence meter UI
-- [x] Shareable result link copy button & metadata
+- [x] Monorepo with backend/frontend, shared OpenAPI artifacts, agent rules, and ADRs.
+- [x] Spring Boot 4.1.1 / Java 25, Maven wrapper, Spotless, JPA, Flyway V1 schema.
+- [x] PostgreSQL 18 local Compose service and persistent volume.
+- [x] React 19 / Vite 8 / TypeScript 6, Tailwind v4, shadcn/Base UI, Oxlint, Prettier, Vitest.
+- [x] Husky/lint-staged hooks and separate backend/frontend CI check jobs.
+- [x] Integration-test OpenAPI export and frontend schema-generation command.
+- [ ] Add an explicit CI generated-contract drift check; current jobs do not compare artifacts.
+- [ ] Pin Testcontainers PostgreSQL to the intended production major version; tests currently use `postgres:latest`.
 
-## Phase 3 — Images + URL Extraction
-- [x] URL article extractor (`Jsoup` + SSRF private-IP guard)
-- [x] Multimodal image upload (`multipart/form-data`, max 4 × 5 MB, JPEG/PNG/WebP magic-byte check)
-- [x] Gemini multimodal claim extraction & verification (text + URL + images)
-- [x] Frontend `InputTabs` (Text / URL / Images) & `ImageDropzone` (drag-drop + clipboard paste)
+## Submission, persistence, and API
 
-## Phase 4 — Hardening
-- [x] Per-IP rate limiting on `POST /api/checks` (10 checks/hour, `429` + `Retry-After`)
-- [x] CORS configuration (`veryfact.cors.allowed-origins`)
-- [x] Frontend `429` rate-limit feedback
-- [x] Rate-limiter unit tests
+- [x] JSON text submission and multipart text/URL/images; backend validation and public report retrieval.
+- [x] Text bounds, four-image limit, 5 MiB/image, supported MIME/signature validation, image previews/drop/paste.
+- [x] SSRF-protected article extraction with redirect validation and bounded size/time.
+- [x] Failed direct article extraction continues with URL/context rather than invented article text.
+- [x] Public `/r/:slug` reports and `GET /api/checks/recent` (up to six completed reports with verdicts).
+- [x] Store public excerpts, URLs, hashes, result JSON, status, timestamps, and provenance; no stored image bytes/IPs.
+- [x] Reuse matching completed reports created within one hour only with `-search-v1` provenance.
+- [x] Async worker stages, safe failure messages, and cleanup of unfinished work older than five minutes.
+- [x] Fixed-window in-memory submission limiting, default 10/hour, `429` and `Retry-After`.
+- [x] Configurable CORS and frontend retry-delay feedback.
 
-## Phase 5 — Deploy-ready
-- [x] Backend multi-stage `Dockerfile` (Eclipse Temurin 25 JRE + non-root user)
-- [x] Frontend multi-stage `Dockerfile` + `nginx.conf` (SPA fallback + `/api` reverse proxy)
-- [x] Full-stack `docker-compose.yml` (`postgres`, `backend`, `frontend` with healthchecks)
-- [x] Root `README.md` with architecture, setup, and AI workflow documentation
+## Verification and evidence
 
-## UI Redesign & Cloud Deployment
-- [x] Modern UI redesign (Truth-desk dot matrix, real thumbnail previews, character ring meter, animated verdict stamp)
-- [x] Cloud datasource & dynamic `$PORT` binding for containerized PaaS (Render, Railway, Fly.io)
-- [x] Step-by-step Cloud Deployment Guide (`docs/DEPLOYMENT.md`)
-- [x] Recent checks community feed (`GET /api/checks/recent` + home page cards)
+- [x] Optional Google Fact Check Tools lookup with explicit credentials and bounded HTTP timeouts.
+- [x] Default SerpApi Google organic retrieval with one/two Gemini-planned queries and tool-free evidence evaluation.
+- [x] Fetch up to three evidence pages through the SSRF guard and distinguish snippets from fetched text.
+- [x] Validate default-path citations against exact retrieved Google-result URLs; reject invented citations.
+- [x] Explicit native Gemini Search route, including Gemini 2.5 compatibility for accounts with access.
+- [x] Remove demo verdicts, ungrounded retries, silent provider/model fallback, and unsafe provider-error logging.
+- [x] Reused Gemini client, LOW thinking for Gemini 3, configurable 60-second default AI deadline (maximum 120 seconds).
+- [x] Mocked provider, timeout, malformed-output, search-evidence, quota, and citation regression tests.
+- [x] Earlier local live SerpApi check recorded in ADR 0004; one sample is not a latency/accuracy guarantee.
+- [ ] Deploy the current backend/frontend configuration to the intended host and verify real provider access, representative latency, and citation relevance.
 
-## Verification speed and live-search correctness
-- [x] Remove ungrounded retries and fabricated demo verdicts
-- [x] Require Google Search execution evidence before completing a check
-- [x] Reuse Gemini client, lower thinking effort, and bound optional fact-check lookups
-- [x] Restrict cache reuse to confirmed-search results less than one hour old
-- [x] Replace fixed loading percentage with stage count and add regression tests
-- [x] Enforce a 60-second Gemini deadline and expire abandoned checks after five minutes
-- [x] Make optional Fact Check credentials explicit instead of reusing the Gemini key
-- [ ] Deploy updated backend/frontend and measure live latency and citation quality
+## Current interface
 
-## Gemini 2.5 free-tier search compatibility
-- [x] Support optional gemini-2.5-flash-lite with thinkingBudget instead of thinkingLevel
-- [x] Use generateContent with Google Search and locally validate prompted JSON reports
-- [x] Require search queries, web-source metadata, and a completed response
-- [x] Add mocked compatibility tests for images, grounding, truncation, and malformed reports
-- [x] Surface model-unavailable errors separately from quota and generic failures
-- [ ] Enable live verification: current project rejects Gemini 2.5 as unavailable to new users; Gemini 3 Search requires eligible API billing
+- [x] Editorial homepage with centered headline/form, optional context, separate mode drafts, and public-content notice.
+- [x] Custom `Icon.png` navigation logo/favicon and locally bundled Inter typography.
+- [x] Up to three recent report cards; hide the section when no recent results are available.
+- [x] Actual-stage orbital loading state, animation pause/resume, status announcements, and reduced motion.
+- [x] Evidence-first report: overall verdict/summary, claim and unique-source counts, confidence explanation, notes, submitted excerpt.
+- [x] Numbered claim evidence, expanded-by-default safe links, published fact-check links, and empty evidence states.
+- [x] Supported/disputed/uncertain filters preserve original claim numbering.
+- [x] Clipboard sharing and manual-copy guidance on failure; report headers omit slug/model badges.
+- [x] Top-scroll before completed/failed report display and accessible verdict focus without additional scrolling.
+- [x] Preserve scroll during filtering and same-state completed-report refreshes.
+- [x] English/Filipino UI resources; initialization is English with no language selector.
+- [x] Counts without leading-zero padding; responsive styles, keyboard interaction, and relevant regression tests.
 
-## Free Google results via SerpApi
-- [x] Add Google organic search retrieval with a separately configured SerpApi free key
-- [x] Use tool-free Gemini 3.5 Flash-Lite for query planning and evidence evaluation
-- [x] Fetch source pages through the SSRF guard and restrict citations to retrieved Google results
-- [x] Handle missing keys, empty results, provider limits, and invalid citations without paid fallbacks
-- [x] Verify the configured SerpApi account is Free Plan and complete a local live check (about 9.4s)
-- [ ] Deploy this configuration to the hosted backend, if used
+Earlier terminal styling, character-ring decoration, verdict stamp, stage counts,
+clickable stage explanations, and document-scan loading were replaced. They are
+historical designs, not additional current features; see ADRs 0005 and 0006.
 
-## Clean editorial UI redesign
-- [x] Simplify the home page around one checking form with restrained colors and typography
-- [x] Remove terminal/version labels, technical provider copy, character-ring decoration, and repeated feed metadata
-- [x] Add keyboard-operable input tabs, optional context disclosure, and a public-content notice
-- [x] Separate claim text from optional context and validate article URL structure
-- [x] Refine report surfaces, verdict contrast, filter controls, and source wrapping
-- [x] Add English and Filipino translation resources for redesigned interface copy
-- [x] Verify frontend checks and desktop/mobile browser layouts
-- [x] Complete backend packaging verification after restarting the local backend to release its JAR
+## Packaging and deployment gaps
 
-## Verification failure investigation
-- [x] Reproduce the reported failure path using the saved excerpt and the exact text supplied by the user; both fresh checks completed after backend restart
-- [x] Add fixed diagnostic reason codes for invalid plans, incomplete reports, and citation validation failures without logging submitted content or provider messages
-- [x] Add regression coverage ensuring unknown diagnostic messages remain private
-- [x] Run backend verification and frontend checks, and restore the local backend
-- Original failed report remains FAILED; its earlier exception log lacks a reason, so the precise original cause is unconfirmed
+- [x] Backend Java 25 multi-stage image with non-root runtime user.
+- [x] Frontend Node 24 build/Nginx image with SPA fallback and Compose-specific API proxy.
+- [x] Full-stack Compose profile; database healthcheck and startup dependency ordering.
+- [x] Configurable JDBC datasource, backend `PORT`, frontend build-time API origin, and hosting guidance.
+- [ ] Synchronize base Compose's model fallback with Spring/`.env.example` and forward SerpApi/provider/deadline/rate-limit settings. The deployment guide supplies an override until implementation changes.
+- [ ] Verify remote-address behavior and rate limiting behind the target hosting proxy; current state is process-local and uses the servlet remote address.
+- [ ] Verify frontend/backend readiness and reverse-proxy timeout behavior in the target host; only the database has a Compose healthcheck.
 
-## Interactive loading and evidence-first reports
-- [x] Replace synthetic progress percentages with actual server stages and a document-scan animation
-- [x] Add clickable stage explanations and an animation pause control independent of verification
-- [x] Redesign results with a prominent verdict, unique-source counts, and a confidence explanation
-- [x] Add numbered claims, collapsible evidence/submission sections, and complete verdict-category filters
-- [x] Localize the loading/report experience in English and Filipino
-- [x] Add tests for stage exploration, pause/resume, report transitions, filters, and clipboard failures
-- [x] Check responsive layouts, dark styling, keyboard interactions, and reduced motion
+## Documentation synchronization
 
-## Number formatting
-- [x] Remove leading-zero padding from homepage steps, claim/source numbers, and report counts; retain this preference in frontend conventions
+- [x] Audit recent commits against controllers, services, AI/search clients, frontend pages/tests, configuration, and CI.
+- [x] Replace template frontend/backend guides with project-specific setup and implementation references.
+- [x] Synchronize README, product specification, architecture, deployment guide, contributor instructions, and folder rules.
+- [x] Correct privacy/storage, source fields, API coverage, model defaults, rate-limiter implementation, localization limits, and container instructions.
+- [x] Mark superseded ADR behavior and preserve historical account/validation observations as history.
 
-## Homepage alignment
-- [x] Center the headline and checker as one group below the navigation; compact the form on shorter desktop viewports while preserving natural mobile scrolling
+No report deletion/retention management, private accounts/reports, durable worker
+queue, shared multi-instance rate limiter, or interface language selector is
+implemented. These are limitations, not committed roadmap items. The original
+failed-report investigation remains inconclusive for its historical exception;
+current safe diagnostic reason codes improve future investigation.
 
-## Focused live loading state
-- [x] Center the loading state below navigation and replace the step console with an orbital animation
-- [x] Remove repeated process lists, stage counts, explanatory panels, and tips; show only the current server-reported activity
-- [x] Keep animation pausing and reduced-motion support independent of live status updates
+## Documentation-audit validation (2026-11-02)
 
-## Report scroll position
-- [x] Reset scroll to the page top before painting a completed or failed report, including reports returned immediately after loading
-- [x] Preserve scroll during claim filtering and subsequent completed-report refreshes; retain accessible verdict focus without additional scrolling
+- Frontend `npm run check`: passed, including 20 tests and the production build.
+- Backend `.\mvnw.cmd verify`: all 52 tests passed; full verification then failed
+  during Spring Boot repackaging because the existing output JAR could not be renamed
+  (Windows file lock). This is a packaging/environment blocker, not a passing full build.
+- Java `spotless:check`, changed-document Prettier checks, local Markdown link checks, and `git diff --check`: passed.
+- Existing frontend lint/build warnings remain: Fast Refresh exports in UI primitives
+  and a production chunk above the configured size warning threshold.
+- No application behavior, API DTOs, or generated contracts were intentionally changed.

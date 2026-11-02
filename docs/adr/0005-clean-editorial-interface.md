@@ -1,5 +1,9 @@
 # 0005 - Clean editorial interface
 
+**Status: Accepted; report/loading details subsequently amended by ADR 0006.**
+
+Current behavior (2026-11-02): the custom Icon.png is used in navigation and the favicon. The home page displays at most three recent reports and hides that section without data. Interface and report resources now include English/Filipino copy, but initialization remains English with no selector. The packaging blocker/test count recorded below are historical validation observations, not current check results.
+
 Date: 2026-11-02
 Status: Accepted
 

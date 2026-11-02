@@ -1,5 +1,26 @@
 # 0006 - Interactive verification and evidence-first reports
 
+## Current implementation (2026-11-02)
+
+The loading simplification below supersedes the original document-scan animation,
+explorable stage descriptions, and step console. `ProgressSteps` now displays one
+orbital animation and one actual server-activity message. Pause/resume affects
+animation alone; polling/status announcements continue. Reduced motion remains
+supported. No stage list, count, percentage, tips, or elapsed-time estimate appears.
+
+The evidence-first report remains implemented: verdict/summary, claim and unique
+safe-URL counts, confidence explanation, original-number-preserving category
+filters, expanded evidence, collapsible submission/notes, and clipboard fallback
+instructions. Slug/model badges are absent from the header; both remain API fields.
+
+Completed and failed reports reset scroll to the top before display on arrival or
+status transition. Completed reports focus the verdict with `preventScroll`.
+Filtering and refreshes in the same completed state preserve the current scroll.
+Counts and claim/source numbers use no leading-zero padding. Interface resources
+exist in English/Filipino; UI initialization is English without a language selector.
+
+## Original decision and subsequent amendment
+
 Date: 2026-11-02
 Status: Accepted
 

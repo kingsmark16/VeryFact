@@ -1,26 +1,39 @@
-# File & Folder Structure Rules (Always Apply)
+﻿# File and folder structure
 
-## Backend (`backend/src/main/java/com/veryfact/`) — Package-by-Feature
-- `config/`: Cross-cutting Spring `@Configuration` classes (`AsyncConfig`, `CorsConfig`, `OpenApiConfig`).
-- `common/exception/`: `ApiException`, domain exceptions, and `GlobalExceptionHandler` returning RFC 9457 `ProblemDetail`.
-- `common/util/`: Pure stateless utilities (`ContentHasher`, `SlugGenerator`).
-- `check/`: Fact-check feature (`CheckController`, `CheckService`, `CheckWorker`, `domain/`, `dto/`).
-- `ai/`: `FactCheckAi` interface, `GeminiFactCheckAi`, `GeminiProperties`, `PromptTemplates`.
-- `factcheck/`: Google Fact Check Tools API client and models.
-- `extraction/`: URL article extraction + SSRF protection.
-- `ratelimit/`: Per-IP rate limiting filter.
-- `src/test/java/com/veryfact/`: Mirrors `src/main/java` package structure exactly.
+## Backend — package by feature
 
-## Frontend (`frontend/src/`) — Feature-Based Structure
-- `app/`: App-wide setup (`providers.tsx` for TanStack Query, `router.tsx` for React Router).
-- `api/`: Shared `axios-client.ts` (with `ProblemDetail` error interceptor) and generated `schema.d.ts`.
-- `components/ui/`: shadcn/ui primitives only.
-- `components/layout/`: Shared layout components (`Header`, `Footer`, `DisclaimerBanner`).
-- `features/<feature>/`: Self-contained domain modules:
-  - `api/`: Axios request functions + TanStack Query hooks (`useQuery`, `useMutation`)
-  - `components/`: Feature-specific UI components
-  - `pages/`: Route page components
-  - `types/`: Feature types derived from `schema.d.ts`
-  - `__tests__/`: Feature tests
-- `hooks/`: Shared custom hooks.
-- `lib/`: Pure utilities (`utils.ts`).
+Under `backend/src/main/java/com/veryfact/`:
+
+- `config/`: `AsyncConfig` (async/scheduling/properties), `WebConfig` (CORS),
+  `RateLimitFilter` and `RateLimitProperties`.
+- `common/exception/`: domain exceptions and `GlobalExceptionHandler` (ProblemDetail).
+- `common/util/`: content hashing, slug generation, and image validation.
+- `check/`: `CheckController`, `CheckService`, `CheckWorker`, `CheckRecovery`,
+  `domain/` entities/repository/enums, and record `dto/` types.
+- `ai/`: `FactCheckAi`, `GoogleSearchFactCheckAi` (default), `GeminiFactCheckAi`
+  (native grounding/shared client), model settings, deadlines, and prompt templates.
+- `search/`: SerpApi client, provider settings, and safe search exceptions.
+- `factcheck/`: optional Google Fact Check Tools client/settings.
+- `extractor/`: URL article extraction and SSRF protection.
+
+Tests in `backend/src/test/java/com/veryfact/` mirror the packages. Flyway migrations
+live in `backend/src/main/resources/db/migration/`.
+
+## Frontend — feature-based structure
+
+Under `frontend/src/`:
+
+- `app/`: Query provider and React Router route setup.
+- `api/`: shared Axios client/error handling and generated `schema.d.ts`.
+- `components/ui/`: shadcn/Base UI primitives.
+- `components/layout/`: shared `Navbar` and `Footer`.
+- `features/check/api/`: Axios request hooks and aliases from generated schemas.
+- `features/check/pages/`: homepage, report, and not-found pages with colocated tests.
+- `features/check/components/`: image input, orbital loading, evidence cards,
+  verdict badges, and sharing, with colocated tests.
+- `features/check/report-copy.ts`: English/Filipino loading/report resources.
+- `lib/`: shared utilities and i18n initialization/homepage resources.
+- `test/`: shared Vitest setup; `index.css`: shared styling and motion rules.
+
+Create additional shared hooks or feature subfolders when needed; do not assume
+planned `hooks/`, `types/`, or `__tests__/` folders already exist.

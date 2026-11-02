@@ -1,5 +1,9 @@
 # Gemini 2.5 Flash-Lite for limited free search grounding
 
+**Status: Accepted optional compatibility; superseded as the default deployment route by ADR 0004.**
+
+Current behavior (2026-11-02): default verification uses SerpApi and Gemini 3 basic generation. Gemini 2.5 compatibility applies only to explicitly selected native grounding with account/model access. The account restrictions, quotas, and local environment selection described below are historical observations, not a statement about current deployment configuration or guaranteed provider availability. See DEPLOYMENT.md for repository configuration.
+
 Date: 2026-11-02
 
 ## Context
@@ -32,6 +36,7 @@ The free-tier route still fails visibly if Search metadata is absent or quota is
 exhausted. Model 3 requests still need API Search access when explicitly selected.
 
 References:
+
 - https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-flash-lite
 - https://ai.google.dev/gemini-api/docs/generate-content/thinking
 
