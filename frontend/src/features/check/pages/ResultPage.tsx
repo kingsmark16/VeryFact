@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import {
@@ -52,15 +52,16 @@ export default function ResultPage() {
   const { data, error, isPending, refetch, isFetching } = useCheckResult(slug);
   const [filter, setFilter] = useState<ClaimFilter>("all");
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const previousStatus = useRef(data?.status);
-  useEffect(() => {
-    if (
-      (previousStatus.current === "PENDING" || previousStatus.current === "PROCESSING") &&
-      data?.status === "COMPLETED"
-    )
-      headingRef.current?.focus({ preventScroll: true });
-    previousStatus.current = data?.status;
-  }, [data?.status]);
+  const previousReportState = useRef("");
+  useLayoutEffect(() => {
+    const reportState = `${slug}:${data?.status}`;
+    const finished = data?.status === "COMPLETED" || data?.status === "FAILED";
+    if (finished && previousReportState.current !== reportState) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      if (data?.status === "COMPLETED") headingRef.current?.focus({ preventScroll: true });
+    }
+    previousReportState.current = reportState;
+  }, [slug, data?.status]);
   const inProgress = data?.status === "PENDING" || data?.status === "PROCESSING";
   const complete = data?.status === "COMPLETED";
   const claims = data?.claims ?? [];

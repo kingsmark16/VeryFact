@@ -108,3 +108,7 @@
 - [x] Center the loading state below navigation and replace the step console with an orbital animation
 - [x] Remove repeated process lists, stage counts, explanatory panels, and tips; show only the current server-reported activity
 - [x] Keep animation pausing and reduced-motion support independent of live status updates
+
+## Report scroll position
+- [x] Reset scroll to the page top before painting a completed or failed report, including reports returned immediately after loading
+- [x] Preserve scroll during claim filtering and subsequent completed-report refreshes; retain accessible verdict focus without additional scrolling

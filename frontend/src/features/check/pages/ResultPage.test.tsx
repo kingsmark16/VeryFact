@@ -49,7 +49,11 @@ function Page() {
     </MemoryRouter>
   );
 }
-beforeEach(() => setResult(report));
+beforeEach(() => {
+  setResult(report);
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  vi.mocked(window.scrollTo).mockClear();
+});
 describe("ResultPage", () => {
   it("filters all verdict categories and counts unique cited sources", async () => {
     render(<Page />);
@@ -62,16 +66,41 @@ describe("ResultPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /disputed\s*1/i }));
     expect(screen.getByRole("heading", { name: "Disputed claim" })).toBeVisible();
   });
-  it("replaces live progress with a report and focuses the verdict", () => {
+  it("opens the finished report at the top and focuses the verdict without scrolling it into the middle", () => {
     setResult({ status: "PROCESSING", stage: "VERIFYING_CLAIMS" });
     const view = render(<Page />);
     expect(screen.getByRole("status", { name: "Live verification" })).toHaveTextContent(
       "Searching and evaluating evidence",
     );
+    expect(window.scrollTo).not.toHaveBeenCalled();
     setResult(report);
     view.rerender(<Page />);
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
     expect(screen.getByRole("heading", { name: "Mixed" })).toHaveFocus();
     expect(screen.queryByRole("heading", { name: "Checking the facts." })).not.toBeInTheDocument();
+  });
+  it("scrolls to the top when an opening request immediately returns a completed report", () => {
+    setResult(undefined, true);
+    const view = render(<Page />);
+    setResult(report);
+    view.rerender(<Page />);
+    expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  });
+  it("does not reset the reader's position for filters or a completed-report refresh", async () => {
+    const view = render(<Page />);
+    vi.mocked(window.scrollTo).mockClear();
+    await userEvent.click(screen.getByRole("button", { name: /uncertain\s*1/i }));
+    setResult({ ...report, summary: "Updated report summary." });
+    view.rerender(<Page />);
+    expect(window.scrollTo).not.toHaveBeenCalled();
   });
   it("shows a real failure and an escape action without a verdict", () => {
     setResult({ status: "FAILED", errorMessage: "The provider is unavailable." });
