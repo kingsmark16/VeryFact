@@ -1,5 +1,6 @@
 package com.veryfact.check;
 
+import com.veryfact.ai.GeminiFactCheckAi;
 import com.veryfact.check.domain.CheckStatus;
 import com.veryfact.check.domain.FactCheck;
 import com.veryfact.check.domain.FactCheckRepository;
@@ -30,7 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class CheckService {
 
-    private static final Duration CACHE_TTL = Duration.ofDays(7);
+    private static final Duration CACHE_TTL = Duration.ofHours(1);
     private static final int EXCERPT_MAX_LENGTH = 500;
     private static final int MAX_TEXT_LENGTH = 20_000;
 
@@ -169,8 +170,8 @@ public class CheckService {
         return repository
                 .findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
                         hash, CheckStatus.COMPLETED, Instant.now().minus(CACHE_TTL))
-                .filter(existing -> existing.getModelVersion() == null
-                        || !existing.getModelVersion().endsWith("-demo"));
+                .filter(existing -> existing.getModelVersion() != null
+                        && existing.getModelVersion().endsWith(GeminiFactCheckAi.GROUNDED_VERSION_SUFFIX));
     }
 
     private InputType resolveInputType(boolean hasText, boolean hasUrl, boolean hasImages) {

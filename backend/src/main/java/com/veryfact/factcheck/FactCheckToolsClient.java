@@ -1,10 +1,13 @@
 package com.veryfact.factcheck;
 
 import com.veryfact.check.dto.FactCheckMatchDto;
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -20,7 +23,14 @@ public class FactCheckToolsClient {
 
     public FactCheckToolsClient(FactCheckProperties properties) {
         this.properties = properties;
-        this.restClient = RestClient.builder().baseUrl(BASE_URL).build();
+        HttpClient httpClient =
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(3));
+        this.restClient = RestClient.builder()
+                .baseUrl(BASE_URL)
+                .requestFactory(requestFactory)
+                .build();
     }
 
     public List<FactCheckMatchDto> searchClaims(String rawText) {
@@ -68,7 +78,7 @@ public class FactCheckToolsClient {
             }
             return matches;
         } catch (Exception ex) {
-            log.warn("Fact Check Tools API lookup skipped or unavailable: {}", ex.getMessage());
+            log.warn("Optional Fact Check Tools lookup unavailable; continuing to Google Search.");
             return List.of();
         }
     }

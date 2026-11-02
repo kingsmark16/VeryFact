@@ -35,8 +35,47 @@ describe("CheckPage", () => {
     const button = screen.getByRole("button", { name: /check facts/i });
     expect(button).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText(/article url/i), "https://example.com/news/story");
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /article url/i }),
+      "https://example.com/news/story",
+    );
     expect(button).toBeEnabled();
+  });
+
+  it("supports arrow keys and a single tab stop in the input tabs", async () => {
+    renderPage();
+    const textTab = screen.getByRole("tab", { name: "Text" });
+    textTab.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Article URL" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Article URL" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(textTab).toHaveAttribute("tabindex", "-1");
+    await userEvent.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "Screenshots" })).toHaveFocus();
+  });
+
+  it("keeps claim text out of optional article context", async () => {
+    renderPage();
+    await userEvent.type(
+      screen.getByLabelText(/article or claim text/i),
+      "A claim that should stay in the text tab.",
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /article url/i }));
+    expect(screen.getByLabelText(/add context/i)).toHaveValue("");
+    await userEvent.click(screen.getByRole("tab", { name: "Text" }));
+    expect(screen.getByLabelText(/article or claim text/i)).toHaveValue(
+      "A claim that should stay in the text tab.",
+    );
+  });
+
+  it("rejects a URL without a hostname", async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole("tab", { name: /article url/i }));
+    await userEvent.type(screen.getByRole("textbox", { name: /article url/i }), "https://");
+    expect(screen.getByRole("button", { name: /check facts/i })).toBeDisabled();
   });
 
   it("renders recent checks when available", async () => {

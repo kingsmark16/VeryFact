@@ -7,6 +7,8 @@ import {
   type ClipboardEvent,
   type DragEvent,
 } from "react";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, Image as ImageIcon, X, AlertCircle } from "lucide-react";
 
@@ -20,6 +22,7 @@ interface ImageDropzoneProps {
 }
 
 export function ImageDropzone({ files, onChange }: ImageDropzoneProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -39,19 +42,18 @@ export function ImageDropzone({ files, onChange }: ImageDropzoneProps) {
 
     for (const file of Array.from(incoming)) {
       if (!ALLOWED_TYPES.includes(file.type)) {
-        setErrorMessage(`"${file.name}" is not a supported format (JPEG, PNG, or WebP only).`);
+        setErrorMessage(t("fileTypeError", { name: file.name }));
         continue;
       }
       if (file.size > MAX_BYTES_PER_FILE) {
-        setErrorMessage(
-          `"${file.name}" exceeds the 5 MB limit (${(file.size / 1024 / 1024).toFixed(1)} MB).`,
-        );
+        setErrorMessage(t("fileSizeError", { name: file.name }));
         continue;
       }
       valid.push(file);
     }
 
     if (valid.length === 0) return;
+    if (files.length + valid.length > MAX_FILES) setErrorMessage(t("fileCountError"));
     const merged = [...files, ...valid].slice(0, MAX_FILES);
     onChange(merged);
   }
@@ -102,7 +104,7 @@ export function ImageDropzone({ files, onChange }: ImageDropzoneProps) {
         tabIndex={0}
         className={`group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all sm:p-8 ${
           isDragging
-            ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/30 scale-[1.01]"
+            ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/30"
             : "border-border/80 bg-muted/20 hover:border-blue-500/50 hover:bg-muted/40"
         } focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15`}
       >
@@ -112,54 +114,34 @@ export function ImageDropzone({ files, onChange }: ImageDropzoneProps) {
           accept="image/jpeg,image/png,image/webp"
           multiple
           className="hidden"
-          aria-label="Upload images"
+          aria-label={t("choose")}
           onChange={handleFileChange}
         />
 
         <div className="mb-3 flex h-13 w-13 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 transition-transform duration-200 group-hover:scale-110 dark:text-blue-400">
-          <UploadCloud className="h-6 w-6" />
+          <UploadCloud aria-hidden="true" className="h-6 w-6" />
         </div>
 
-        <p className="text-sm font-semibold text-foreground">
-          Drop screenshots here or{" "}
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="text-blue-600 underline-offset-4 hover:underline dark:text-blue-400"
-          >
-            browse files
-          </button>
-        </p>
-
-        <p className="mt-1 text-xs text-muted-foreground">
-          Tip: You can also press{" "}
-          <kbd className="rounded border bg-background px-1.5 py-0.5 font-mono text-[11px] shadow-2xs">
-            Ctrl+V
-          </kbd>{" "}
-          anywhere to paste
-        </p>
-
-        <div className="mt-4 flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={files.length >= MAX_FILES}
-            onClick={() => inputRef.current?.click()}
-            className="gap-2 rounded-xl text-xs font-semibold shadow-2xs"
-          >
-            <ImageIcon className="h-4 w-4 text-muted-foreground" />
-            <span>
-              Choose images ({files.length}/{MAX_FILES})
-            </span>
-          </Button>
-          <span className="text-[11px] text-muted-foreground">JPEG, PNG, WebP · Max 5 MB each</span>
-        </div>
+        <p className="text-sm font-medium">{t("upload")}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("uploadHint")}</p>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={files.length >= MAX_FILES}
+          onClick={() => inputRef.current?.click()}
+          className="mt-4 min-h-11 rounded-lg"
+        >
+          {t("choose")} ({files.length}/{MAX_FILES})
+        </Button>
+        <p className="mt-4 text-xs text-muted-foreground">{t("fileLimits")}</p>
       </div>
 
       {errorMessage && (
-        <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2 text-xs text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <div
+          role="alert"
+          className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2 text-xs text-destructive"
+        >
+          <AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -186,10 +168,10 @@ export function ImageDropzone({ files, onChange }: ImageDropzoneProps) {
                 <button
                   type="button"
                   onClick={() => removeAt(idx)}
-                  aria-label={`Remove ${file.name}`}
-                  className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white opacity-90 backdrop-blur-xs transition-opacity hover:bg-black hover:opacity-100"
+                  aria-label={t("remove", { name: file.name })}
+                  className="absolute top-1.5 right-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white opacity-90 backdrop-blur-xs transition-opacity hover:bg-black hover:opacity-100"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X aria-hidden="true" className="h-3.5 w-3.5" />
                 </button>
               </div>
 

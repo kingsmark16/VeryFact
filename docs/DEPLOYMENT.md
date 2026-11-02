@@ -11,7 +11,7 @@ flowchart LR
     User["User Browser"] --> |HTTPS| Frontend["Frontend (Vite / Nginx)"]
     Frontend --> |HTTPS /api/*| Backend["Spring Boot 4.1 (Java 25)"]
     Backend --> |JDBC SSL| Postgres[("Managed PostgreSQL")]
-    Backend --> |API| Gemini["Google Gemini 3.8 Flash"]
+    Backend --> |API| Gemini["Google Gemini 3.5 Flash-Lite"]
     Backend --> |API| FactCheck["Google Fact Check Tools"]
 ```
 
@@ -58,7 +58,7 @@ Render provides a free PostgreSQL database, free backend Web Service (Docker), a
    | `POSTGRES_USER` | `veryfact` | Database username |
    | `POSTGRES_PASSWORD` | `<your-render-db-password>` | From your Render DB |
    | `GEMINI_API_KEY` | `<your-gemini-api-key>` | From Google AI Studio |
-   | `GOOGLE_FACTCHECK_API_KEY` | `<your-api-key>` | *(Optional; falls back to GEMINI_API_KEY)* |
+   | `GOOGLE_FACTCHECK_API_KEY` | `<your-api-key>` | *(Optional; separate Fact Check Tools credentials)* |
    | `CORS_ALLOWED_ORIGINS` | `*` *(or your frontend URL after creation)* | e.g. `https://veryfact.onrender.com` |
 5. Click **Deploy Web Service**.
    - Render will build the Docker container using `backend/Dockerfile` with Java 25.
@@ -104,3 +104,48 @@ If you prefer deploying the full monorepo with 1 click:
    - Add `GEMINI_API_KEY`.
 4. Add a new service pointing to `frontend/` using Dockerfile (`frontend/Dockerfile` includes Nginx).
 
+
+## Live Google Search verification
+
+Deploy both the backend and frontend changes. Configure `GEMINI_API_KEY` on the
+backend and set `GEMINI_MODEL` to a model available to that key which supports
+Google Search (default: `gemini-3.5-flash-lite`). Fact Check Tools is optional and does
+not replace Google Search. Missing Gemini configuration, quota/authentication
+failures, and responses without search-result evidence now produce failed checks,
+never demo verdicts.
+
+New successful checks expose a `modelVersion` ending in `-search-v1`, confirming
+that Google Search execution evidence was returned (queries and web sources for Gemini 2.5). Historical
+reports remain accessible; only confirmed-search results within one hour are
+reused for identical submissions. After deploying, submit a fresh claim, inspect
+the cited pages, and compare completion times across representative inputs.
+
+Gemini requests time out after 60 seconds (`GEMINI_REQUEST_TIMEOUT`, maximum
+120s). Google 429 responses fail the check without ungrounded retries. Check the
+Gemini project quota/model access when these persist. Fact Check Tools requires
+an explicit `GOOGLE_FACTCHECK_API_KEY`; it no longer reuses the Gemini key. A 401
+from that optional API does not prevent live Gemini Google Search. Checks left
+pending/processing by a restart expire after five minutes (cleanup runs every
+30 seconds). Backend code changes require restarting/redeploying the backend;
+a refreshed Vite frontend does not reload an existing Java process.
+
+Gemini 3.5 Flash-Lite text-generation quota does not include free-tier API
+Google Search grounding. That tool requires eligible API billing. Gemini 2.5
+Flash/Flash-Lite offer limited free grounding only for eligible legacy users;
+Google restricts those models to users who actively used them previously.
+A visible quota row does not establish model access. HTTP 404 is reported as
+a model-unavailable failure. Verify model and Search access before deployment.
+
+## Default free Google-results configuration
+
+Set `GEMINI_MODEL=gemini-3.5-flash-lite`, `GOOGLE_SEARCH_PROVIDER=serpapi`, and
+`SERPAPI_API_KEY` from a SerpApi Free Plan account. Retain `GEMINI_API_KEY` for
+Gemini basic generation. Queries are sent to SerpApi for Google results; native
+Gemini Google Search is not called in this mode. The currently advertised free
+allowance is 250 searches/month; an uncached report uses one or two searches
+and two Gemini calls. Both accounts must remain within their free allowances.
+There is no automatic upgrade or paid-grounding fallback. Never put keys in the
+frontend or commit them. Restart/redeploy after setting the backend variables.
+
+Earlier notes about Gemini 3 Search billing refer to the explicit native mode
+(`GOOGLE_SEARCH_PROVIDER=gemini`), not this default external-retrieval path.

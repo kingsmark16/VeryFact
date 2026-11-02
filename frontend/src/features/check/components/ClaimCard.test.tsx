@@ -29,12 +29,12 @@ describe("ClaimCard", () => {
       />,
     );
 
-    expect(screen.getByText("92% confidence")).toBeInTheDocument();
+    expect(screen.getByText("92% AI confidence")).toBeInTheDocument();
     expect(screen.getByText("Professional Fact-Checks")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Fact Check: Coffee does not grant immortality/i }),
     ).toHaveAttribute("href", "https://verafiles.org/articles/coffee-check");
-    expect(screen.getByRole("link", { name: "WHO Guidelines" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /WHO Guidelines/ })).toBeInTheDocument();
     expect(screen.queryByText("Unsafe Link")).not.toBeInTheDocument();
   });
 });

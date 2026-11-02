@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Verdict } from "../api/check-api";
@@ -19,43 +21,51 @@ interface VerdictConfig {
 
 const VERDICT_STYLES: Record<Verdict, VerdictConfig> = {
   TRUE: {
-    label: "True",
-    className: "bg-emerald-600/90 text-white border-emerald-500 shadow-xs shadow-emerald-600/20",
+    label: "result.true",
+    className:
+      "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800",
     icon: CheckCircle2,
   },
   MOSTLY_TRUE: {
-    label: "Mostly true",
-    className: "bg-teal-600/90 text-white border-teal-500 shadow-xs shadow-teal-600/20",
+    label: "result.mostlyTrue",
+    className:
+      "bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950 dark:text-teal-200 dark:border-teal-800",
     icon: Check,
   },
   MIXED: {
-    label: "Mixed",
-    className: "bg-amber-500/90 text-white border-amber-400 shadow-xs shadow-amber-500/20",
+    label: "result.mixed",
+    className:
+      "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800",
     icon: AlertTriangle,
   },
   MOSTLY_FALSE: {
-    label: "Mostly false",
-    className: "bg-orange-600/90 text-white border-orange-500 shadow-xs shadow-orange-600/20",
+    label: "result.mostlyFalse",
+    className:
+      "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950 dark:text-orange-200 dark:border-orange-800",
     icon: AlertCircle,
   },
   FALSE: {
-    label: "False",
-    className: "bg-rose-600/90 text-white border-rose-500 shadow-xs shadow-rose-600/20",
+    label: "result.false",
+    className:
+      "bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800",
     icon: XCircle,
   },
   UNVERIFIABLE: {
-    label: "Unverifiable",
-    className: "bg-slate-600/90 text-white border-slate-500 shadow-xs shadow-slate-600/20",
+    label: "result.unverifiable",
+    className:
+      "bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:border-slate-800",
     icon: HelpCircle,
   },
   SATIRE_OR_OPINION: {
-    label: "Satire / opinion",
-    className: "bg-purple-600/90 text-white border-purple-500 shadow-xs shadow-purple-600/20",
+    label: "result.satire",
+    className:
+      "bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800",
     icon: Sparkles,
   },
 };
 
 export function VerdictBadge({ verdict, className }: { verdict?: Verdict; className?: string }) {
+  const { t } = useTranslation();
   if (!verdict) return null;
   const config = VERDICT_STYLES[verdict];
   if (!config) return null;
@@ -69,8 +79,8 @@ export function VerdictBadge({ verdict, className }: { verdict?: Verdict; classN
         className,
       )}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span>{config.label}</span>
+      <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+      <span>{t(config.label)}</span>
     </Badge>
   );
 }

@@ -2,6 +2,8 @@ package com.veryfact.check;
 
 import com.veryfact.ai.FactCheckAi;
 import com.veryfact.ai.FactCheckAi.AiVerificationOutput;
+import com.veryfact.ai.VerificationModelUnavailableException;
+import com.veryfact.ai.VerificationTimeoutException;
 import com.veryfact.check.domain.CheckStage;
 import com.veryfact.check.domain.CheckStatus;
 import com.veryfact.check.domain.FactCheck;
@@ -11,6 +13,7 @@ import com.veryfact.check.dto.FactCheckMatchDto;
 import com.veryfact.common.util.ImageValidator.ValidatedImage;
 import com.veryfact.extractor.ArticleExtractor;
 import com.veryfact.factcheck.FactCheckToolsClient;
+import com.veryfact.search.SearchUnavailableException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -65,9 +68,8 @@ public class CheckWorker {
                     combinedText = combinedText.isBlank() ? urlHeader : combinedText + "\n\n" + urlHeader;
                 } catch (IllegalArgumentException extractEx) {
                     log.info(
-                            "Direct HTML extraction failed for id={} ({}); falling back to URL/headline verification.",
-                            checkId,
-                            extractEx.getMessage());
+                            "Direct HTML extraction failed for id={}; falling back to URL/headline verification.",
+                            checkId);
                     String fallbackUrlContext = "Submitted Article URL: " + url
                             + "\n(Note: Direct HTTP fetch of this URL failed or returned HTTP 404/403. "
                             + "Verify whether this article actually exists on the publisher's site and fact-check the claim in the URL/context.)";
@@ -99,30 +101,57 @@ public class CheckWorker {
             check.setCompletedAt(Instant.now());
             repository.save(check);
         } catch (IllegalArgumentException ex) {
-            log.warn("Check validation/extraction failed for id={}: {}", checkId, ex.getMessage());
+            log.warn("Check validation/extraction failed for id={}", checkId);
             check.setStatus(CheckStatus.FAILED);
             check.setStage(CheckStage.FAILED);
-            check.setErrorMessage(ex.getMessage());
+            check.setErrorMessage("The submission could not be processed. Please check your input and try again.");
             check.setCompletedAt(Instant.now());
             repository.save(check);
         } catch (Exception ex) {
-            log.error("Fact check failed for id={}", checkId, ex);
+            log.error(
+                    "Fact check failed for id={} ({}, reason={})",
+                    checkId,
+                    ex.getClass().getSimpleName(),
+                    failureReason(ex));
             check.setStatus(CheckStatus.FAILED);
             check.setStage(CheckStage.FAILED);
             String fullError = buildErrorChain(ex);
-            if (isRateLimit(fullError)) {
+            if (ex instanceof SearchUnavailableException) {
+                check.setErrorMessage(ex.getMessage());
+            } else if (ex instanceof VerificationModelUnavailableException) {
                 check.setErrorMessage(
-                        "Google Gemini API free-tier quota (HTTP 429/503) reached for this API key. Google AI Studio has a per-minute limit on free keys. Please wait ~60 seconds and try again.");
+                        "The selected verification model is unavailable for this Google project. Select an accessible model with Google Search enabled.");
+            } else if (ex instanceof VerificationTimeoutException) {
+                check.setErrorMessage("Live Google Search verification timed out. Please try again later.");
+            } else if (isRateLimit(fullError)) {
+                check.setErrorMessage(
+                        "Google verification is temporarily unavailable or its quota was reached. Please try again later.");
             } else if (isAuthError(fullError)) {
                 check.setErrorMessage(
-                        "Google Gemini API Key is invalid or unauthorized (HTTP 401). Please check your GEMINI_API_KEY in .env or Google AI Studio.");
+                        "Live Google verification is unavailable because of a service configuration issue.");
             } else {
-                check.setErrorMessage("Verification could not be completed: "
-                        + (ex.getMessage() != null ? ex.getMessage() : "Please try again later."));
+                check.setErrorMessage(
+                        "Live Google Search verification could not be completed. Please try again later.");
             }
             check.setCompletedAt(Instant.now());
             repository.save(check);
         }
+    }
+
+    static String failureReason(Exception error) {
+        // Fixed application messages only: arbitrary provider messages may contain private data.
+        if (error.getClass() != IllegalStateException.class) return "PROVIDER_OR_OTHER_FAILURE";
+        String message = error.getMessage();
+        if (message == null) return "UNKNOWN_FAILURE";
+        return switch (message) {
+            case "Could not prepare valid search queries" -> "INVALID_SEARCH_PLAN";
+            case "Gemini returned no report" -> "EMPTY_MODEL_RESPONSE";
+            case "Gemini response did not complete" -> "INCOMPLETE_MODEL_RESPONSE";
+            case "Google verification returned an incomplete or invalid report." -> "INVALID_MODEL_REPORT";
+            case "Verification cited a source absent from Google results" -> "UNRECOGNIZED_CITATION";
+            case "Verification returned a verdict without a Google source" -> "MISSING_CITATION";
+            default -> "UNKNOWN_FAILURE";
+        };
     }
 
     private String buildErrorChain(Throwable t) {

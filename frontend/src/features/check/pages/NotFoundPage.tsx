@@ -7,7 +7,11 @@ export default function NotFoundPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center p-6 text-center">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center p-6 text-center"
+      >
         <div className="space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <FileQuestion className="h-7 w-7" />

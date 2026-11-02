@@ -22,9 +22,14 @@ spring:
 veryfact:
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3.8-flash}
+    model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+    request-timeout: ${GEMINI_REQUEST_TIMEOUT:60s}
   factcheck:
-    api-key: ${GOOGLE_FACTCHECK_API_KEY:${GEMINI_API_KEY:}}
+    api-key: ${GOOGLE_FACTCHECK_API_KEY:}
+  search:
+    provider: ${GOOGLE_SEARCH_PROVIDER:serpapi}
+    serpapi:
+      api-key: ${SERPAPI_API_KEY:}
   ratelimit:
     requests-per-hour: ${RATE_LIMIT_PER_HOUR:10}
   cors:

@@ -1,12 +1,12 @@
 # VeryFact — Product Specification
 
-VeryFact is a public, account-free fake-news checker. A visitor submits pasted text, an article URL, or one or more images/screenshots. The backend extracts factual claims, checks them against professional fact-checks (Google Fact Check Tools API) and live web evidence (Gemini 3.8 Flash + Google Search grounding), and returns a verdict for each claim plus an overall verdict with cited sources.
+VeryFact is a public, account-free fake-news checker. A visitor submits pasted text, an article URL, or one or more images/screenshots. The backend extracts factual claims, checks them against professional fact-checks (Google Fact Check Tools API) and live web evidence (Google Search results via SerpApi, evaluated by Gemini 3.5 Flash-Lite), and returns a verdict for each claim plus an overall verdict with cited sources.
 
 ## Technical & Product Decisions
 
 | Area | Choice |
 |---|---|
-| AI engine | Google Gemini API, model `gemini-3.8-flash`, official Java SDK `com.google.genai:google-genai` |
+| AI engine | Google Gemini API, model `gemini-3.5-flash-lite`, official Java SDK `com.google.genai:google-genai` |
 | Inputs | Text, URL, single image, multiple images (max 4 × 5 MB, jpeg/png/webp; text ≤ 20,000 chars) |
 | Evidence | Google Search grounding + Google Fact Check Tools API |
 | Persistence | PostgreSQL 18, shareable `/r/{slug}`, cache keyed on SHA-256 content hash |

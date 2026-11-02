@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, type SyntheticEvent } from "react";
-import { useNavigate, Link } from "react-router";
+import { useState, useEffect, useRef, type SyntheticEvent, type KeyboardEvent } from "react";
+import { useNavigate, Link, useLocation } from "react-router";
+import { useTranslation } from "react-i18next";
 import { ApiError } from "@/api/axios-client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,500 +15,252 @@ import {
   Image as ImageIcon,
   ArrowRight,
   Loader2,
-  AlertCircle,
-  Clipboard,
-  Trash2,
-  CheckCircle2,
-  History,
+  ArrowUpRight,
 } from "lucide-react";
 
 type InputMode = "text" | "url" | "images";
-
-const MIN_LENGTH = 20;
-const MAX_LENGTH = 20000;
-
-function formatRelativeTime(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h ago`;
-  const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function getInputTypeIcon(type?: string) {
-  if (type === "URL") return Link2;
-  if (type === "IMAGE") return ImageIcon;
-  return FileText;
-}
+const modes = [
+  { key: "text", icon: FileText },
+  { key: "url", icon: Link2 },
+  { key: "images", icon: ImageIcon },
+] as const;
 
 export default function CheckPage() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<InputMode>("text");
   const [text, setText] = useState("");
+  const [context, setContext] = useState("");
   const [url, setUrl] = useState("");
   const [images, setImages] = useState<File[]>([]);
-  const [isColdStarting, setIsColdStarting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [isSlow, setIsSlow] = useState(false);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
   const createCheck = useCreateCheck();
-  const { data: recentChecks, isLoading: isLoadingRecent } = useRecentChecks();
-
+  const { data: recentChecks } = useRecentChecks();
   useEffect(() => {
-    if (!createCheck.isPending) {
-      return;
-    }
-    const timer = setTimeout(() => setIsColdStarting(true), 4000);
+    if (location.hash === "#how-it-works")
+      document.getElementById("how-it-works")?.scrollIntoView();
+  }, [location]);
+  useEffect(() => {
+    if (!createCheck.isPending) return;
+    const timer = window.setTimeout(() => setIsSlow(true), 4000);
     return () => {
-      clearTimeout(timer);
-      setIsColdStarting(false);
+      window.clearTimeout(timer);
+      setIsSlow(false);
     };
   }, [createCheck.isPending]);
-
   const trimmedLength = text.trim().length;
-  const trimmedUrl = url.trim();
-
+  let validUrl = false;
+  try {
+    validUrl = ["http:", "https:"].includes(new URL(url.trim()).protocol);
+  } catch {
+    /* Incomplete URL */
+  }
   const canSubmit =
     mode === "text"
-      ? trimmedLength >= MIN_LENGTH && trimmedLength <= MAX_LENGTH
-      : mode === "url"
-        ? trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")
-        : images.length > 0;
-
+      ? trimmedLength >= 20 && text.length <= 20000
+      : (mode === "url" ? validUrl : images.length > 0) && context.length <= 20000;
   function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit) return;
-
-    const payload =
+    if (!canSubmit || createCheck.isPending) return;
+    createCheck.mutate(
       mode === "text"
         ? { text }
         : mode === "url"
-          ? { url: trimmedUrl, text: trimmedLength > 0 ? text : undefined }
-          : { images, text: trimmedLength > 0 ? text : undefined };
-
-    createCheck.mutate(payload, {
-      onSuccess: (data) => {
-        if (data.slug) navigate(`/r/${data.slug}`);
+          ? { url: url.trim(), text: context || undefined }
+          : { images, text: context || undefined },
+      {
+        onSuccess: (data) => {
+          if (data.slug) navigate(`/r/${data.slug}`);
+        },
       },
-    });
+    );
   }
-
-  async function handlePasteClipboard() {
-    try {
-      const clipText = await navigator.clipboard.readText();
-      if (clipText) {
-        setText((prev) => (prev ? `${prev}\n${clipText}` : clipText));
-      }
-    } catch {
-      // Clipboard access denied or unsupported
-    }
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % modes.length;
+    else if (event.key === "ArrowLeft") next = (index + modes.length - 1) % modes.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = modes.length - 1;
+    else return;
+    event.preventDefault();
+    setMode(modes[next].key);
+    tabRefs.current[next]?.focus();
   }
-
-  // Circular character progress calculation
-  const charProgressPct = Math.min(100, Math.round((trimmedLength / MIN_LENGTH) * 100));
-
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-background bg-dot-pattern">
+    <div className="flex min-h-dvh flex-col bg-background">
       <Navbar />
-
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-start px-4 py-4 sm:px-6 sm:py-6">
-        {/* Editorial Masthead Hero */}
-        <div className="mb-4 space-y-2 text-center sm:mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-600/20 bg-blue-50/70 px-3 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-300">
-            <span className="flex h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-            <span>Public Verification Terminal</span>
-          </div>
-
-          <h1 className="font-heading text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl md:text-4xl">
-            Check facts against accredited sources.
-          </h1>
-
-          <p className="mx-auto max-w-lg text-sm text-muted-foreground sm:text-base">
-            Verify viral claims, articles, or social media screenshots with Google Fact Check Tools
-            and Google Search grounding.
-          </p>
-        </div>
-
-        {/* Interactive Verification Console Card */}
-        <div className="rounded-3xl border border-border/90 bg-card p-5 shadow-xl shadow-slate-200/50 backdrop-blur-md transition-shadow dark:shadow-none sm:p-7">
-          {/* Segmented Mode Selector */}
-          <div
-            role="tablist"
-            aria-label="Input type"
-            className="mb-4 grid grid-cols-3 rounded-2xl border border-border/80 bg-muted/60 p-1 text-xs font-semibold sm:text-sm"
-          >
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={mode === "text"}
-              variant={mode === "text" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setMode("text")}
-              className={`gap-2 rounded-xl py-2 transition-all ${
-                mode === "text"
-                  ? "bg-background text-foreground shadow-xs hover:bg-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <FileText className="h-4 w-4 shrink-0" />
-              <span>Text</span>
-            </Button>
-
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={mode === "url"}
-              variant={mode === "url" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setMode("url")}
-              className={`gap-2 rounded-xl py-2 transition-all ${
-                mode === "url"
-                  ? "bg-background text-foreground shadow-xs hover:bg-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Link2 className="h-4 w-4 shrink-0" />
-              <span>Article URL</span>
-            </Button>
-
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={mode === "images"}
-              variant={mode === "images" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setMode("images")}
-              className={`gap-2 rounded-xl py-2 transition-all ${
-                mode === "images"
-                  ? "bg-background text-foreground shadow-xs hover:bg-background"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <ImageIcon className="h-4 w-4 shrink-0" />
-              <span>Screenshots</span>
-            </Button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Mode: TEXT */}
-            {mode === "text" && (
-              <div className="space-y-2">
-                <label htmlFor="claim-text" className="block text-xs font-semibold text-foreground">
-                  Statement or Claim Text
-                </label>
-                <div className="relative">
-                  <Textarea
-                    id="claim-text"
-                    ref={textareaRef}
-                    aria-label="Article or claim text"
-                    placeholder="Paste the statement, article body, or viral rumor you want to verify…"
-                    rows={5}
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    className="w-full resize-y rounded-2xl border-border/80 bg-background/90 p-3.5 text-sm leading-relaxed shadow-2xs transition-all focus-visible:border-blue-500 focus-visible:ring-4 focus-visible:ring-blue-500/15 min-h-[110px] max-h-[220px]"
-                  />
-
-                  {/* Micro Quick Actions inside Textarea */}
-                  <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
-                    {text.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={handlePasteClipboard}
-                        className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-2xs backdrop-blur-xs transition-colors hover:bg-muted hover:text-foreground"
-                      >
-                        <Clipboard className="h-3 w-3" />
-                        <span>Paste</span>
-                      </button>
-                    )}
-                    {text.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setText("")}
-                        aria-label="Clear input text"
-                        className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-background/90 px-2 py-1 text-xs font-medium text-muted-foreground shadow-2xs backdrop-blur-xs transition-colors hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    {trimmedLength >= MIN_LENGTH ? (
-                      <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Length requirement met</span>
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-blue-600 transition-all duration-150"
-                            style={{ width: `${charProgressPct}%` }}
-                          />
-                        </div>
-                        <span>
-                          Need {Math.max(0, MIN_LENGTH - trimmedLength)} more character(s)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <span className="font-mono">
-                    {trimmedLength} / {MAX_LENGTH}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Mode: URL */}
-            {mode === "url" && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="article-url"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Article URL
-                  </label>
-                  <input
-                    id="article-url"
-                    type="url"
-                    aria-label="Article URL"
-                    placeholder="https://example.com/news-story-to-verify"
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
-                    className="w-full rounded-2xl border border-border/80 bg-background px-4 py-3 text-sm shadow-2xs transition-all focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
-                  />
-                  <p className="px-1 text-xs text-muted-foreground">
-                    Public news URL. VeryFact extracts readable content with SSRF-safe redirects.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="url-context"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Additional Context{" "}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
-                  </label>
-                  <Textarea
-                    id="url-context"
-                    aria-label="Additional context (optional)"
-                    placeholder="Optional: add specific context, timestamp, or particular claim to inspect within this article…"
-                    rows={2}
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Mode: IMAGES */}
-            {mode === "images" && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-foreground">
-                    Screenshots{" "}
-                    <span className="font-normal text-muted-foreground">(up to 4 images)</span>
-                  </label>
-                  <ImageDropzone files={images} onChange={setImages} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="images-context"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Additional Context{" "}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
-                  </label>
-                  <Textarea
-                    id="images-context"
-                    aria-label="Additional context (optional)"
-                    placeholder="Optional: add context about the screenshot(s), e.g., platform, viral date, or claimant…"
-                    rows={2}
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    className="rounded-2xl border-border/80 bg-background text-sm leading-relaxed"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Form Submission Footer */}
-            <div className="flex flex-col items-center justify-center gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={!canSubmit || createCheck.isPending}
-                size="lg"
-                className="group relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 px-8 font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 disabled:opacity-50 sm:w-auto"
-              >
-                {createCheck.isPending ? (
+      <main id="main-content" tabIndex={-1} className="home-main">
+        <div className="home-focus">
+          <section className="hero" aria-labelledby="hero-heading">
+            <p className="eyebrow">{t("eyebrow")}</p>
+            <h1 id="hero-heading">
+              {t("headline")}
+              <br />
+              <span>{t("headlineAccent")}</span>
+            </h1>
+            <p className="hero-description">{t("intro")}</p>
+          </section>
+          <section className="check-console" aria-label={t("claimLabel")}>
+            <div role="tablist" aria-label={t("inputType")} className="input-tabs">
+              {modes.map(({ key, icon: Icon }, index) => (
+                <button
+                  key={key}
+                  ref={(element) => {
+                    tabRefs.current[index] = element;
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`tab-${key}`}
+                  aria-controls="input-panel"
+                  aria-selected={mode === key}
+                  tabIndex={mode === key ? 0 : -1}
+                  onKeyDown={(event) => handleTabKey(event, index)}
+                  onClick={() => {
+                    setMode(key);
+                    createCheck.reset();
+                  }}
+                >
+                  <Icon aria-hidden="true" size={17} />
+                  {t(key)}
+                </button>
+              ))}
+            </div>
+            <form onSubmit={handleSubmit} className="check-form">
+              <div role="tabpanel" id="input-panel" aria-labelledby={`tab-${mode}`}>
+                {mode === "text" ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Analyzing claims…</span>
+                    <label htmlFor="claim-text" className="field-label">
+                      {t("claimLabel")}
+                    </label>
+                    <Textarea
+                      id="claim-text"
+                      aria-label={t("claimAccessible")}
+                      aria-describedby="text-hint"
+                      placeholder={t("placeholder")}
+                      value={text}
+                      maxLength={20000}
+                      onChange={(event) => setText(event.target.value)}
+                      className="claim-input"
+                    />
+                    <div id="text-hint" className="input-meta">
+                      <span>
+                        {trimmedLength < 20
+                          ? t("minimum")
+                          : t("count", { count: text.length.toLocaleString() })}
+                      </span>
+                      {text && (
+                        <button type="button" onClick={() => setText("")}>
+                          {t("clear")}
+                        </button>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
-                    <span>Check facts</span>
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    {mode === "url" ? (
+                      <>
+                        <label htmlFor="article-url" className="field-label">
+                          {t("url")}
+                        </label>
+                        <input
+                          id="article-url"
+                          type="url"
+                          placeholder={t("urlPlaceholder")}
+                          value={url}
+                          onChange={(event) => setUrl(event.target.value)}
+                          className="url-input"
+                        />
+                      </>
+                    ) : (
+                      <ImageDropzone files={images} onChange={setImages} />
+                    )}
+                    <details className="context-disclosure">
+                      <summary>{t("context")}</summary>
+                      <label htmlFor="context" className="sr-only">
+                        {t("context")}
+                      </label>
+                      <Textarea
+                        id="context"
+                        value={context}
+                        maxLength={20000}
+                        onChange={(event) => setContext(event.target.value)}
+                        placeholder={t("contextPlaceholder")}
+                        className="mt-3 min-h-24 text-base"
+                      />
+                    </details>
                   </>
                 )}
-              </Button>
-              {isColdStarting && (
-                <p className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 animate-pulse">
-                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                  <span>Waking up cloud backend (Render free tier cold start takes ~35–45s)…</span>
+              </div>
+              <div className="submit-row">
+                <p>{t("publicNote")}</p>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={!canSubmit || createCheck.isPending}
+                  className="submit-button"
+                >
+                  {createCheck.isPending ? (
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                  ) : null}
+                  {t(createCheck.isPending ? "submitting" : "submit")}
+                  {!createCheck.isPending && <ArrowRight aria-hidden="true" size={17} />}
+                </Button>
+              </div>
+              {isSlow && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t("waiting")}
                 </p>
               )}
-            </div>
-
-            {/* Error Banner */}
-            {createCheck.error instanceof ApiError &&
-              (() => {
-                const detail = createCheck.error.detail || "";
-                const isTimeout =
-                  detail.toLowerCase().includes("timeout") ||
-                  createCheck.error.status === 504 ||
-                  createCheck.error.status === 502;
-                return (
-                  <div
-                    role="alert"
-                    className="flex items-start justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
-                  >
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                      <div>
-                        <p className="font-semibold">
-                          {isTimeout ? "Cloud server warming up" : "Unable to process check"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-destructive/90">
-                          {isTimeout
-                            ? "The cloud server was sleeping (Render free tier cold start). It is now online! Please click 'Retry now' to submit."
-                            : detail}
-                          {createCheck.error.status === 429 && createCheck.error.retryAfterSeconds
-                            ? ` (Rate limit active: retry in ~${Math.ceil(createCheck.error.retryAfterSeconds / 60)} min)`
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-                    {isTimeout && (
-                      <button
-                        type="submit"
-                        className="shrink-0 rounded-xl bg-destructive px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-destructive/90 cursor-pointer"
-                      >
-                        Retry now
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
-          </form>
-        </div>
-
-        {/* Recent Checks Section */}
-        {recentChecks && recentChecks.length > 0 && (
-          <section aria-labelledby="recent-checks-heading" className="mt-6 w-full space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <h2
-                  id="recent-checks-heading"
-                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+              {createCheck.error && (
+                <p
+                  role="alert"
+                  className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
                 >
-                  Recent checks
-                </h2>
-              </div>
-              <span className="text-[11px] text-muted-foreground">Community feed</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {recentChecks.map((check) => {
-                const Icon = getInputTypeIcon(check.inputType);
-                return (
-                  <Link
-                    key={check.slug}
-                    to={`/r/${check.slug}`}
-                    className="group flex flex-col justify-between rounded-2xl border border-border/80 bg-card/90 p-3.5 shadow-2xs backdrop-blur-xs transition-all hover:border-blue-500/40 hover:bg-card hover:shadow-md hover:shadow-blue-500/5 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-                          <span>{check.inputType || "TEXT"}</span>
-                          {check.createdAt && (
-                            <>
-                              <span className="text-border">•</span>
-                              <span>{formatRelativeTime(check.createdAt)}</span>
-                            </>
-                          )}
-                        </div>
-                        {check.overallVerdict && (
-                          <VerdictBadge
-                            verdict={check.overallVerdict}
-                            className="px-2 py-0 text-[10px]"
-                          />
-                        )}
-                      </div>
-
-                      <p className="line-clamp-2 text-xs font-medium leading-snug text-foreground/90">
-                        {check.inputExcerpt || check.summary || "Fact check verification"}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2 text-[11px]">
-                      {check.confidence != null ? (
-                        <span className="text-muted-foreground">
-                          {Math.round(check.confidence * 100)}% confidence
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                      <span className="inline-flex items-center font-semibold text-blue-600 transition-transform group-hover:translate-x-0.5 dark:text-blue-400">
-                        <span>View report</span>
-                        <ArrowRight className="ml-1 h-3 w-3" />
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                  {createCheck.error instanceof ApiError && createCheck.error.status === 429
+                    ? t("rateLimit", {
+                        minutes: Math.max(
+                          1,
+                          Math.ceil((createCheck.error.retryAfterSeconds ?? 60) / 60),
+                        ),
+                      })
+                    : t("error")}
+                </p>
+              )}
+            </form>
           </section>
-        )}
-
-        {isLoadingRecent && (
-          <section className="mt-6 w-full space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <History className="h-4 w-4 animate-pulse text-muted-foreground/60" />
-              <div className="h-3 w-24 animate-pulse rounded-md bg-muted/60" />
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-28 animate-pulse rounded-2xl border border-border/50 bg-card/50 p-3.5"
-                />
+        </div>
+        {recentChecks && recentChecks.length > 0 && (
+          <section className="recent-section" aria-labelledby="recent-heading">
+            <h2 id="recent-heading">{t("recent")}</h2>
+            <div className="recent-grid">
+              {recentChecks.slice(0, 3).map((check) => (
+                <Link key={check.slug} to={`/r/${check.slug}`} className="recent-card">
+                  <VerdictBadge verdict={check.overallVerdict} />
+                  <p>{check.inputExcerpt || check.summary || t("reportFallback")}</p>
+                  <span>
+                    {t("report")}
+                    <ArrowUpRight aria-hidden="true" size={16} />
+                  </span>
+                </Link>
               ))}
             </div>
           </section>
         )}
-
-        {!isLoadingRecent && recentChecks && recentChecks.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-dashed border-border/80 p-6 text-center text-xs text-muted-foreground">
-            No verified checks in the feed yet. Submit a claim above to see it appear here!
+        <section id="how-it-works" className="how-section" aria-labelledby="how-heading">
+          <h2 id="how-heading">{t("howTitle")}</h2>
+          <div className="how-grid">
+            {[1, 2, 3].map((number) => (
+              <div key={number}>
+                <span className="step-number">{number}</span>
+                <h3>{t(`step${number}`)}</h3>
+                <p>{t(`detail${number}`)}</p>
+              </div>
+            ))}
           </div>
-        )}
+        </section>
       </main>
-
       <Footer />
     </div>
   );

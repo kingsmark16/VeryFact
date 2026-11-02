@@ -1,7 +1,7 @@
 # VeryFact
 
 > **AI-Powered Public Fact-Checking Platform**  
-> Verify viral claims, suspicious news links, and social media screenshots against Google Fact Check Tools and Google Gemini (`gemini-3.8-flash`) with Google Search grounding — instantly producing shareable, citation-backed verdict reports.
+> Verify viral claims, suspicious news links, and social media screenshots against Google Fact Check Tools and Google Gemini (`gemini-3.5-flash-lite`) with Google Search grounding — instantly producing shareable, citation-backed verdict reports.
 
 ---
 
@@ -10,7 +10,7 @@
 - **Multimodal Submissions:** Fact-check raw article text, public article URLs (with SSRF protection), or uploaded screenshots/images (PNG, JPEG, WebP).
 - **Double-Layer Verification:**
   1. Searches the official **Google Fact Check Tools API** for verified claims from accredited journalistic fact-checkers (PolitiFact, AFP, FactCheck.org, etc.).
-  2. Synthesizes evidence using **Gemini 3.8 Flash** grounded with **Google Search** to identify claims, evaluate truthfulness, detect red flags, and cite primary sources.
+  2. Synthesizes evidence using **Gemini 3.5 Flash-Lite** using **Google Search results via SerpApi** to identify claims, evaluate truthfulness, detect red flags, and cite primary sources.
 - **Explainable Verdicts:** Every check produces an overall verdict badge (`True`, `Mostly true`, `Mixed`, `Mostly false`, `False`, `Unverifiable`), a confidence percentage, manipulative red flags, and claim-by-claim breakdowns with primary source links.
 - **Shareable Reports:** Permanent, public result URLs (`/r/{slug}`) that anyone can inspect or share without logging in.
 - **Privacy & Security First:**
@@ -18,7 +18,7 @@
   - No user content or client IP addresses persisted to disk or logged.
   - In-memory sliding-window IP rate limiting uses salted SHA-256 hashes generated from an ephemeral per-boot salt.
   - Multi-hop SSRF protection blocks private IP ranges, loopbacks, link-local addresses, and AWS/GCP cloud metadata endpoints.
-  - Content-hash deduplication (SHA-256) returns cached results for identical submissions within 7 days, eliminating redundant AI calls.
+  - Content-hash deduplication (SHA-256) returns cached results for identical submissions within one hour when Google Search execution was confirmed, avoiding redundant AI calls while limiting stale reuse.
 
 ---
 
@@ -34,7 +34,7 @@ flowchart TD
         SpringBoot --> |Async Worker / Virtual Threads| CheckWorker["CheckWorker"]
         CheckWorker --> |SSRF Guard & Jsoup| WebFetch["Public Web (Article URL)"]
         CheckWorker --> |claims:search| FactCheckAPI["Google Fact Check Tools API"]
-        CheckWorker --> |Interactions / Grounded Search| GeminiAPI["Google Gemini 3.8 Flash"]
+        CheckWorker --> |Grounded Search| GeminiAPI["Google Gemini 3.5 Flash-Lite"]
         SpringBoot --> |Flyway Migrations & JPA| Postgres[("PostgreSQL 18 (:5432)")]
     end
 ```
@@ -82,7 +82,7 @@ Edit `.env` and add your Gemini API key:
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-*(Optional: `GOOGLE_FACTCHECK_API_KEY` can also be provided; if omitted, `GEMINI_API_KEY` is used as fallback).*
+*(Optional: configure `GOOGLE_FACTCHECK_API_KEY` separately for Fact Check Tools. Without it, the optional lookup is skipped; Gemini Google Search still runs.)*
 
 ---
 
@@ -209,3 +209,24 @@ GET /api/checks/{slug}
 
 This project is licensed under the [MIT License](LICENSE).
 
+
+### Free Google results with Gemini
+
+The default route retrieves Google Search results through **SerpApi**, then uses
+**Gemini 3.5 Flash-Lite** basic generation to evaluate the evidence. Configure:
+
+```dotenv
+GEMINI_MODEL=gemini-3.5-flash-lite
+GOOGLE_SEARCH_PROVIDER=serpapi
+SERPAPI_API_KEY=your-free-serpapi-key
+```
+
+Use a SerpApi Free Plan account (currently 250 searches/month). Each uncached
+check uses one or two searches plus two Gemini requests. Both providers' limits
+apply; identical confirmed reports can be reused for one hour. Missing keys or
+exhausted allowances produce failures, with no automatic paid fallback.
+Restart the backend after changing environment variables.
+
+Native Gemini grounding is optional via `GOOGLE_SEARCH_PROVIDER=gemini`; Gemini
+3 built-in Search needs eligible API billing. Legacy Gemini 2.5 Search is limited
+to eligible existing users, even when a quota row is visible.

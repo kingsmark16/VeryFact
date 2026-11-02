@@ -28,6 +28,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
@@ -76,6 +79,7 @@ class CheckServiceTest {
         FactCheck existing = new FactCheck(UUID.randomUUID(), "abc123XYZ0", "hash", InputType.TEXT, "excerpt");
         existing.setStatus(CheckStatus.COMPLETED);
         existing.setStage(CheckStage.COMPLETED);
+        existing.setModelVersion("gemini-3.8-flash-search-v1");
 
         when(repository.findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
                         any(), eq(CheckStatus.COMPLETED), any()))
@@ -87,6 +91,24 @@ class CheckServiceTest {
         assertThat(response.cached()).isTrue();
         assertThat(response.slug()).isEqualTo("abc123XYZ0");
         verify(checkWorker, never()).processTextCheckAsync(any(), any());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"gemini-3.8-flash", "gemini-3.8-flash-demo", "gemini-3.8-flash-fallback"})
+    void submitTextCheck_doesNotReuseResultsWithoutConfirmedSearch(String modelVersion) {
+        FactCheck existing = new FactCheck(UUID.randomUUID(), "oldResult1", "hash", InputType.TEXT, "excerpt");
+        existing.setStatus(CheckStatus.COMPLETED);
+        existing.setModelVersion(modelVersion);
+        when(repository.findFirstByContentHashAndStatusAndCreatedAtAfterOrderByCreatedAtDesc(
+                        any(), eq(CheckStatus.COMPLETED), any()))
+                .thenReturn(Optional.of(existing));
+
+        CreateCheckResponse response =
+                checkService.submitTextCheck(new CreateCheckRequest("A factual claim to verify."));
+
+        assertThat(response.cached()).isFalse();
+        verify(checkWorker).processTextCheckAsync(any(), eq("A factual claim to verify."));
     }
 
     @Test
